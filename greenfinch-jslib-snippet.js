@@ -1,14 +1,14 @@
 // ==ClosureCompiler==
 // @compilation_level SIMPLE_OPTIMIZATIONS
-// @output_file_name mixpanel-jslib-2.2-snippet.min.js
+// @output_file_name greenfinch-jslib-2.2-snippet.min.js
 // ==/ClosureCompiler==
 
 /** @define {string} */
-var MIXPANEL_LIB_URL = '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js';
+var GREENFINCH_LIB_URL = 'https://asset.kcd.co.kr/js/greenfinch.min.js';
 
-(function(document, mixpanel) {
+(function(document, greenfinch) {
     // Only stub out if this is the first time running the snippet.
-    if (!mixpanel['__SV']) {
+    if (!greenfinch['__SV']) {
         var win = window;
 
         // grab the hash params for ce editor immediately in case
@@ -28,16 +28,16 @@ var MIXPANEL_LIB_URL = '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js';
           }
         } catch (e) {}
 
-        var script, first_script, gen_fn, functions, i, lib_name = "mixpanel";
-        window[lib_name] = mixpanel;
+        var script, first_script, gen_fn, functions, i, lib_name = "greenfinch";
+        window[lib_name] = greenfinch;
 
-        mixpanel['_i'] = [];
+        greenfinch['_i'] = [];
 
-        mixpanel['init'] = function (token, config, name) {
-            // support multiple mixpanel instances
-            var target = mixpanel;
+        greenfinch['init'] = function (token, config, name) {
+            // support multiple greenfinch instances
+            var target = greenfinch;
             if (typeof(name) !== 'undefined') {
-                target = mixpanel[name] = [];
+                target = greenfinch[name] = [];
             } else {
                 name = lib_name;
             }
@@ -70,14 +70,15 @@ var MIXPANEL_LIB_URL = '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js';
                 };
             }
 
-            // create shallow clone of the public mixpanel interface
-            // Note: only supports 1 additional level atm, e.g. mixpanel.people.set, not mixpanel.people.set.do_something_else.
-            functions = "disable time_event track track_pageview track_links track_forms track_with_groups add_group set_group remove_group register register_once alias unregister identify name_tag set_config reset opt_in_tracking opt_out_tracking has_opted_in_tracking has_opted_out_tracking clear_opt_in_out_tracking people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user people.remove".split(' ');
+            // create shallow clone of the public greenfinch interface
+            // Note: only supports 1 additional level atm, e.g. greenfinch.people.set, not greenfinch.people.set.do_something_else.
+            // functions = "disable time_event track track_pageview track_links track_forms track_with_groups add_group set_group remove_group register register_once alias unregister identify name_tag set_config reset opt_in_tracking opt_out_tracking has_opted_in_tracking has_opted_out_tracking clear_opt_in_out_tracking people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user people.remove".split(' ');
+            functions = "track page register unregister".split(' ');
             for (i = 0; i < functions.length; i++) {
                 _set_and_defer(target, functions[i]);
             }
 
-            // special case for get_group(): chain method calls like mixpanel.get_group('foo', 'bar').unset('baz')
+            // special case for get_group(): chain method calls like greenfinch.get_group('foo', 'bar').unset('baz')
             var group_functions = "set set_once union unset remove delete".split(' ');
             target['get_group'] = function() {
                 var mock_group = {};
@@ -98,27 +99,26 @@ var MIXPANEL_LIB_URL = '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js';
                 return mock_group;
             };
 
-            // register mixpanel instance
-            mixpanel['_i'].push([token, config, name]);
+            // register greenfinch instance
+            greenfinch['_i'].push([token, config, name]);
         };
 
         // Snippet version, used to fail on new features w/ old snippet
-        mixpanel['__SV'] = 1.2;
+        greenfinch['__SV'] = 1.2;
 
         script = document.createElement("script");
         script.type = "text/javascript";
         script.async = true;
 
-        if (typeof MIXPANEL_CUSTOM_LIB_URL !== 'undefined') {
-            script.src = MIXPANEL_CUSTOM_LIB_URL;
-        } else if (document.location.protocol === 'file:' && MIXPANEL_LIB_URL.match(/^\/\//)) {
-            script.src = 'https:' + MIXPANEL_LIB_URL;
+        if (typeof GREENFINCH_CUSTOM_LIB_URL !== 'undefined') {
+            script.src = GREENFINCH_CUSTOM_LIB_URL;
+        } else if (document.location.protocol === 'file:' && GREENFINCH_LIB_URL.match(/^\/\//)) {
+            script.src = 'https:' + GREENFINCH_LIB_URL;
         } else {
-            script.src = MIXPANEL_LIB_URL;
+            script.src = GREENFINCH_LIB_URL;
         }
 
         first_script = document.getElementsByTagName("script")[0];
         first_script.parentNode.insertBefore(script, first_script);
     }
-// Pass in current Mixpanel object if it exists (for ppl like Optimizely)
-})(document, window['mixpanel'] || []);
+})(document, window['greenfinch'] || []);

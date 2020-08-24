@@ -42,17 +42,17 @@ import { _, console } from './utils';
 ];
 
 /**
- * Mixpanel Persistence Object
+ * Greenfinch Persistence Object
  * @constructor
  */
-var MixpanelPersistence = function(config) {
+var GreenfinchPersistence = function(config) {
     this['props'] = {};
     this.campaign_params_saved = false;
 
     if (config['persistence_name']) {
         this.name = 'mp_' + config['persistence_name'];
     } else {
-        this.name = 'mp_' + config['token'] + '_mixpanel';
+        this.name = 'mp_' + config['token'] + '_greenfinch';
     }
 
     var storage_type = config['persistence'];
@@ -73,7 +73,7 @@ var MixpanelPersistence = function(config) {
     this.save();
 };
 
-MixpanelPersistence.prototype.properties = function() {
+GreenfinchPersistence.prototype.properties = function() {
     var p = {};
     // Filter out reserved properties
     _.each(this['props'], function(v, k) {
@@ -84,7 +84,7 @@ MixpanelPersistence.prototype.properties = function() {
     return p;
 };
 
-MixpanelPersistence.prototype.load = function() {
+GreenfinchPersistence.prototype.load = function() {
     if (this.disabled) { return; }
 
     var entry = this.storage.parse(this.name);
@@ -94,7 +94,7 @@ MixpanelPersistence.prototype.load = function() {
     }
 };
 
-MixpanelPersistence.prototype.upgrade = function(config) {
+GreenfinchPersistence.prototype.upgrade = function(config) {
     var upgrade_from_old_lib = config['upgrade'],
         old_cookie_name,
         old_cookie;
@@ -121,7 +121,7 @@ MixpanelPersistence.prototype.upgrade = function(config) {
         }
     }
 
-    if (!config['cookie_name'] && config['name'] !== 'mixpanel') {
+    if (!config['cookie_name'] && config['name'] !== 'greenfinch') {
         // special case to handle people with cookies of the form
         // mp_TOKEN_INSTANCENAME from the first release of this library
         old_cookie_name = 'mp_' + config['token'] + '_' + config['name'];
@@ -149,7 +149,7 @@ MixpanelPersistence.prototype.upgrade = function(config) {
     }
 };
 
-MixpanelPersistence.prototype.save = function() {
+GreenfinchPersistence.prototype.save = function() {
     if (this.disabled) { return; }
     this._expire_notification_campaigns();
     this.storage.set(
@@ -163,7 +163,7 @@ MixpanelPersistence.prototype.save = function() {
     );
 };
 
-MixpanelPersistence.prototype.remove = function() {
+GreenfinchPersistence.prototype.remove = function() {
     // remove both domain and subdomain cookies
     this.storage.remove(this.name, false, this.cookie_domain);
     this.storage.remove(this.name, true, this.cookie_domain);
@@ -171,7 +171,7 @@ MixpanelPersistence.prototype.remove = function() {
 
 // removes the storage entry and deletes all loaded data
 // forced name for tests
-MixpanelPersistence.prototype.clear = function() {
+GreenfinchPersistence.prototype.clear = function() {
     this.remove();
     this['props'] = {};
 };
@@ -181,7 +181,7 @@ MixpanelPersistence.prototype.clear = function() {
 * @param {*=} default_value
 * @param {number=} days
 */
-MixpanelPersistence.prototype.register_once = function(props, default_value, days) {
+GreenfinchPersistence.prototype.register_once = function(props, default_value, days) {
     if (_.isObject(props)) {
         if (typeof(default_value) === 'undefined') { default_value = 'None'; }
         this.expire_days = (typeof(days) === 'undefined') ? this.default_expiry : days;
@@ -203,7 +203,7 @@ MixpanelPersistence.prototype.register_once = function(props, default_value, day
 * @param {Object} props
 * @param {number=} days
 */
-MixpanelPersistence.prototype.register = function(props, days) {
+GreenfinchPersistence.prototype.register = function(props, days) {
     if (_.isObject(props)) {
         this.expire_days = (typeof(days) === 'undefined') ? this.default_expiry : days;
 
@@ -216,14 +216,14 @@ MixpanelPersistence.prototype.register = function(props, days) {
     return false;
 };
 
-MixpanelPersistence.prototype.unregister = function(prop) {
+GreenfinchPersistence.prototype.unregister = function(prop) {
     if (prop in this['props']) {
         delete this['props'][prop];
         this.save();
     }
 };
 
-MixpanelPersistence.prototype._expire_notification_campaigns = _.safewrap(function() {
+GreenfinchPersistence.prototype._expire_notification_campaigns = _.safewrap(function() {
     var campaigns_shown = this['props'][CAMPAIGN_IDS_KEY],
         EXPIRY_TIME = Config.DEBUG ? 60 * 1000 : 60 * 60 * 1000; // 1 minute (Config.DEBUG) / 1 hour (PDXN)
     if (!campaigns_shown) {
@@ -239,19 +239,19 @@ MixpanelPersistence.prototype._expire_notification_campaigns = _.safewrap(functi
     }
 });
 
-MixpanelPersistence.prototype.update_campaign_params = function() {
+GreenfinchPersistence.prototype.update_campaign_params = function() {
     if (!this.campaign_params_saved) {
         this.register_once(_.info.campaignParams());
         this.campaign_params_saved = true;
     }
 };
 
-MixpanelPersistence.prototype.update_search_keyword = function(referrer) {
+GreenfinchPersistence.prototype.update_search_keyword = function(referrer) {
     this.register(_.info.searchInfo(referrer));
 };
 
 // EXPORTED METHOD, we test this directly.
-MixpanelPersistence.prototype.update_referrer_info = function(referrer) {
+GreenfinchPersistence.prototype.update_referrer_info = function(referrer) {
     // If referrer doesn't exist, we want to note the fact that it was type-in traffic.
     this.register_once({
         '$initial_referrer': referrer || '$direct',
@@ -259,7 +259,7 @@ MixpanelPersistence.prototype.update_referrer_info = function(referrer) {
     }, '');
 };
 
-MixpanelPersistence.prototype.get_referrer_info = function() {
+GreenfinchPersistence.prototype.get_referrer_info = function() {
     return _.strip_empty_properties({
         '$initial_referrer': this['props']['$initial_referrer'],
         '$initial_referring_domain': this['props']['$initial_referring_domain']
@@ -269,7 +269,7 @@ MixpanelPersistence.prototype.get_referrer_info = function() {
 // safely fills the passed in object with stored properties,
 // does not override any properties defined in both
 // returns the passed in object
-MixpanelPersistence.prototype.safe_merge = function(props) {
+GreenfinchPersistence.prototype.safe_merge = function(props) {
     _.each(this['props'], function(val, prop) {
         if (!(prop in props)) {
             props[prop] = val;
@@ -279,7 +279,7 @@ MixpanelPersistence.prototype.safe_merge = function(props) {
     return props;
 };
 
-MixpanelPersistence.prototype.update_config = function(config) {
+GreenfinchPersistence.prototype.update_config = function(config) {
     this.default_expiry = this.expire_days = config['cookie_expiration'];
     this.set_disabled(config['disable_persistence']);
     this.set_cookie_domain(config['cookie_domain']);
@@ -288,7 +288,7 @@ MixpanelPersistence.prototype.update_config = function(config) {
     this.set_secure(config['secure_cookie']);
 };
 
-MixpanelPersistence.prototype.set_disabled = function(disabled) {
+GreenfinchPersistence.prototype.set_disabled = function(disabled) {
     this.disabled = disabled;
     if (this.disabled) {
         this.remove();
@@ -297,7 +297,7 @@ MixpanelPersistence.prototype.set_disabled = function(disabled) {
     }
 };
 
-MixpanelPersistence.prototype.set_cookie_domain = function(cookie_domain) {
+GreenfinchPersistence.prototype.set_cookie_domain = function(cookie_domain) {
     if (cookie_domain !== this.cookie_domain) {
         this.remove();
         this.cookie_domain = cookie_domain;
@@ -305,7 +305,7 @@ MixpanelPersistence.prototype.set_cookie_domain = function(cookie_domain) {
     }
 };
 
-MixpanelPersistence.prototype.set_cross_site = function(cross_site) {
+GreenfinchPersistence.prototype.set_cross_site = function(cross_site) {
     if (cross_site !== this.cross_site) {
         this.cross_site = cross_site;
         this.remove();
@@ -313,7 +313,7 @@ MixpanelPersistence.prototype.set_cross_site = function(cross_site) {
     }
 };
 
-MixpanelPersistence.prototype.set_cross_subdomain = function(cross_subdomain) {
+GreenfinchPersistence.prototype.set_cross_subdomain = function(cross_subdomain) {
     if (cross_subdomain !== this.cross_subdomain) {
         this.cross_subdomain = cross_subdomain;
         this.remove();
@@ -321,11 +321,11 @@ MixpanelPersistence.prototype.set_cross_subdomain = function(cross_subdomain) {
     }
 };
 
-MixpanelPersistence.prototype.get_cross_subdomain = function() {
+GreenfinchPersistence.prototype.get_cross_subdomain = function() {
     return this.cross_subdomain;
 };
 
-MixpanelPersistence.prototype.set_secure = function(secure) {
+GreenfinchPersistence.prototype.set_secure = function(secure) {
     if (secure !== this.secure) {
         this.secure = secure ? true : false;
         this.remove();
@@ -333,7 +333,7 @@ MixpanelPersistence.prototype.set_secure = function(secure) {
     }
 };
 
-MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
+GreenfinchPersistence.prototype._add_to_people_queue = function(queue, data) {
     var q_key = this._get_queue_key(queue),
         q_data = data[queue],
         set_q = this._get_or_create_queue(SET_ACTION),
@@ -421,7 +421,7 @@ MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
     this.save();
 };
 
-MixpanelPersistence.prototype._pop_from_people_queue = function(queue, data) {
+GreenfinchPersistence.prototype._pop_from_people_queue = function(queue, data) {
     var q = this._get_queue(queue);
     if (!_.isUndefined(q)) {
         _.each(data, function(v, k) {
@@ -443,7 +443,7 @@ MixpanelPersistence.prototype._pop_from_people_queue = function(queue, data) {
     }
 };
 
-MixpanelPersistence.prototype._get_queue_key = function(queue) {
+GreenfinchPersistence.prototype._get_queue_key = function(queue) {
     if (queue === SET_ACTION) {
         return SET_QUEUE_KEY;
     } else if (queue === SET_ONCE_ACTION) {
@@ -463,24 +463,24 @@ MixpanelPersistence.prototype._get_queue_key = function(queue) {
     }
 };
 
-MixpanelPersistence.prototype._get_queue = function(queue) {
+GreenfinchPersistence.prototype._get_queue = function(queue) {
     return this['props'][this._get_queue_key(queue)];
 };
-MixpanelPersistence.prototype._get_or_create_queue = function(queue, default_val) {
+GreenfinchPersistence.prototype._get_or_create_queue = function(queue, default_val) {
     var key = this._get_queue_key(queue);
     default_val = _.isUndefined(default_val) ? {} : default_val;
 
     return this['props'][key] || (this['props'][key] = default_val);
 };
 
-MixpanelPersistence.prototype.set_event_timer = function(event_name, timestamp) {
+GreenfinchPersistence.prototype.set_event_timer = function(event_name, timestamp) {
     var timers = this['props'][EVENT_TIMERS_KEY] || {};
     timers[event_name] = timestamp;
     this['props'][EVENT_TIMERS_KEY] = timers;
     this.save();
 };
 
-MixpanelPersistence.prototype.remove_event_timer = function(event_name) {
+GreenfinchPersistence.prototype.remove_event_timer = function(event_name) {
     var timers = this['props'][EVENT_TIMERS_KEY] || {};
     var timestamp = timers[event_name];
     if (!_.isUndefined(timestamp)) {
@@ -491,7 +491,7 @@ MixpanelPersistence.prototype.remove_event_timer = function(event_name) {
 };
 
 export {
-    MixpanelPersistence,
+    GreenfinchPersistence,
     SET_QUEUE_KEY,
     SET_ONCE_QUEUE_KEY,
     UNSET_QUEUE_KEY,

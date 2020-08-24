@@ -1,31 +1,20 @@
 /* eslint camelcase: "off" */
 import Config from './config';
-import { _, console, userAgent, window, document, navigator, determine_eligibility } from './utils';
-import { autotrack } from './autotrack';
-import { FormTracker, LinkTracker } from './dom-trackers';
-import { RequestBatcher } from './request-batcher';
-import { MixpanelGroup } from './mixpanel-group';
-import { MixpanelNotification } from './mixpanel-notification';
-import { MixpanelPeople } from './mixpanel-people';
-import {
-    MixpanelPersistence,
-    PEOPLE_DISTINCT_ID_KEY,
-    ALIAS_ID_KEY
-} from './mixpanel-persistence';
-import {
-    optIn,
-    optOut,
-    hasOptedIn,
-    hasOptedOut,
-    clearOptInOut,
-    addOptOutCheckMixpanelLib
-} from './gdpr-utils';
+import {_, console, determine_eligibility, document, navigator, userAgent, window} from './utils';
+import {autotrack} from './autotrack';
+import {FormTracker, LinkTracker} from './dom-trackers';
+import {RequestBatcher} from './request-batcher';
+import {GreenfinchGroup} from './greenfinch-group';
+import {GreenfinchNotification} from './greenfinch-notification';
+import {GreenfinchPeople} from './greenfinch-people';
+import {ALIAS_ID_KEY, GreenfinchPersistence, PEOPLE_DISTINCT_ID_KEY} from './greenfinch-persistence';
+import {addOptOutCheckGreenfinchLib, clearOptInOut, hasOptedIn, hasOptedOut, optIn, optOut} from './gdpr-utils';
 
 /*
- * Mixpanel JS Library
+ * Greenfinch JS Library
  *
- * Copyright 2012, Mixpanel, Inc. All Rights Reserved
- * http://mixpanel.com/
+ * Copyright 2012, Greenfinch, Inc. All Rights Reserved
+ * http://greenfinch.com/
  *
  * Includes portions of Underscore.js
  * http://documentcloud.github.com/underscore/
@@ -35,7 +24,7 @@ import {
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
-// @output_file_name mixpanel-2.8.min.js
+// @output_file_name greenfinch-2.8.min.js
 // ==/ClosureCompiler==
 
 /*
@@ -49,11 +38,11 @@ Globals should be all caps
 */
 
 var init_type;       // MODULE or SNIPPET loader
-var mixpanel_master; // main mixpanel instance / object
-var INIT_MODULE  = 0;
+var greenfinch_master; // main greenfinch instance / object
+var INIT_MODULE = 0;
 var INIT_SNIPPET = 1;
 
-/** @const */ var PRIMARY_INSTANCE_NAME = 'mixpanel';
+/** @const */ var PRIMARY_INSTANCE_NAME = 'greenfinch';
 
 
 /*
@@ -71,7 +60,7 @@ var ENQUEUE_REQUESTS = !USE_XHR && (userAgent.indexOf('MSIE') === -1) && (userAg
 // save reference to navigator.sendBeacon so it can be minified
 var sendBeacon = null;
 if (navigator['sendBeacon']) {
-    sendBeacon = function() {
+    sendBeacon = function () {
         // late reference to navigator.sendBeacon to allow patching/spying
         return navigator['sendBeacon'].apply(navigator, arguments);
     };
@@ -81,67 +70,71 @@ if (navigator['sendBeacon']) {
  * Module-level globals
  */
 var DEFAULT_CONFIG = {
-    'api_host':                          'https://api-js.mixpanel.com',
-    'api_method':                        'POST',
-    'api_transport':                     'XHR',
-    'app_host':                          'https://mixpanel.com',
-    'autotrack':                         true,
-    'cdn':                               'https://cdn.mxpnl.com',
-    'cross_site_cookie':                 false,
-    'cross_subdomain_cookie':            true,
-    'persistence':                       'cookie',
-    'persistence_name':                  '',
-    'cookie_domain':                     '',
-    'cookie_name':                       '',
-    'loaded':                            function() {},
-    'store_google':                      true,
-    'save_referrer':                     true,
-    'test':                              false,
-    'verbose':                           false,
-    'img':                               false,
-    'debug':                             false,
-    'track_links_timeout':               300,
-    'cookie_expiration':                 365,
-    'upgrade':                           false,
-    'disable_persistence':               false,
-    'disable_cookie':                    false,
-    'secure_cookie':                     false,
-    'ip':                                true,
-    'opt_out_tracking_by_default':       false,
-    'opt_out_persistence_by_default':    false,
+    'api_host': 'https://event.kcd.partners/api/publish/',
+    'api_host_debug': 'https://event-staging.kcd.partners/api/publish/',
+    'api_method': 'POST',
+    'api_transport': 'XHR',
+    'app_host': 'https://greenfinch.com',
+    'autotrack': true,
+    'cdn': 'https://cdn.mxpnl.com',
+    'service_name': '',
+    'cross_site_cookie': false,
+    'cross_subdomain_cookie': false,
+    'persistence': 'cookie',
+    'persistence_name': 'greenfinch',
+    'cookie_domain': '',
+    'cookie_name': 'greenfinch',
+    'loaded': function () {
+    },
+    'store_google': true,
+    'save_referrer': true,
+    'test': false,
+    'verbose': false,
+    'img': false,
+    'debug': false,
+    'track_links_timeout': 300,
+    'cookie_expiration': 365,
+    'upgrade': false,
+    'disable_persistence': false,
+    'disable_cookie': false,
+    'secure_cookie': false,
+    'ip': true,
+    'opt_out_tracking_by_default': false,
+    'opt_out_persistence_by_default': false,
     'opt_out_tracking_persistence_type': 'localStorage',
-    'opt_out_tracking_cookie_prefix':    null,
-    'property_blacklist':                [],
-    'xhr_headers':                       {}, // { header: value, header2: value }
-    'inapp_protocol':                    '//',
-    'inapp_link_new_window':             false,
-    'ignore_dnt':                        false,
-    'batch_requests':                    false, // for now
-    'batch_size':                        50,
-    'batch_flush_interval_ms':           5000,
-    'batch_request_timeout_ms':          90000
+    'opt_out_tracking_cookie_prefix': null,
+    'property_blacklist': [],
+    'xhr_headers': {}, // { header: value, header2: value }
+    'inapp_protocol': '//',
+    'inapp_link_new_window': false,
+    'ignore_dnt': false,
+    'batch_requests': false, // for now
+    'batch_size': 50,
+    'batch_flush_interval_ms': 5000,
+    'batch_request_timeout_ms': 90000
 };
 
 var DOM_LOADED = false;
 
 /**
- * Mixpanel Library Object
+ * Greenfinch Library Object
  * @constructor
  */
-var MixpanelLib = function() {};
+var GreenfinchLib = function () {
+};
 
 
 /**
  * create_mplib(token:string, config:object, name:string)
  *
- * This function is used by the init method of MixpanelLib objects
+ * This function is used by the init method of GreenfinchLib objects
  * as well as the main initializer at the end of the JSLib (that
- * initializes document.mixpanel as well as any additional instances
+ * initializes document.greenfinch as well as any additional instances
  * declared before this file has loaded).
  */
-var create_mplib = function(token, config, name) {
+var create_mplib = function (token, config, name) {
     var instance,
-        target = (name === PRIMARY_INSTANCE_NAME) ? mixpanel_master : mixpanel_master[name];
+        target = (name === PRIMARY_INSTANCE_NAME) ? greenfinch_master : greenfinch_master[name];
 
     if (target && init_type === INIT_MODULE) {
         instance = target;
@@ -150,7 +143,7 @@ var create_mplib = function(token, config, name) {
             console.error('You have already initialized ' + name);
             return;
         }
-        instance = new MixpanelLib();
+        instance = new GreenfinchLib();
     }
 
     instance._cached_groups = {}; // cache groups in a pool
@@ -159,7 +152,7 @@ var create_mplib = function(token, config, name) {
 
     instance._init(token, config, name);
 
-    instance['people'] = new MixpanelPeople();
+    instance['people'] = new GreenfinchPeople();
     instance['people']._init(instance);
 
     // if any instance on the page has debug = true, we set the
@@ -193,55 +186,55 @@ var create_mplib = function(token, config, name) {
     return instance;
 };
 
-var encode_data_for_request = function(data) {
+var encode_data_for_request = function (data) {
     var json_data = _.JSONEncode(data);
-    var encoded_data = _.base64Encode(json_data);
-    return {'data': encoded_data};
+    // var encoded_data = _.base64Encode(json_data);
+    return {'data': json_data};
 };
 
 // Initialization methods
 
 /**
- * This function initializes a new instance of the Mixpanel tracking object.
- * All new instances are added to the main mixpanel object as sub properties (such as
- * mixpanel.library_name) and also returned by this function. To define a
+ * This function initializes a new instance of the Greenfinch tracking object.
+ * All new instances are added to the main greenfinch object as sub properties (such as
+ * greenfinch.library_name) and also returned by this function. To define a
  * second instance on the page, you would call:
  *
- *     mixpanel.init('new token', { your: 'config' }, 'library_name');
+ *     greenfinch.init('new token', { your: 'config' }, 'library_name');
  *
  * and use it like so:
  *
- *     mixpanel.library_name.track(...);
+ *     greenfinch.library_name.track(...);
  *
- * @param {String} token   Your Mixpanel API token
- * @param {Object} [config]  A dictionary of config options to override. <a href="https://github.com/mixpanel/mixpanel-js/blob/8b2e1f7b/src/mixpanel-core.js#L87-L110">See a list of default config options</a>.
- * @param {String} [name]    The name for the new mixpanel instance that you want created
+ * @param {String} token   Your Greenfinch API token
+ * @param {Object} [config]  A dictionary of config options to override. <a href="https://github.com/greenfinch/greenfinch-js/blob/8b2e1f7b/src/greenfinch-core.js#L87-L110">See a list of default config options</a>.
+ * @param {String} [name]    The name for the new greenfinch instance that you want created
  */
-MixpanelLib.prototype.init = function (token, config, name) {
+GreenfinchLib.prototype.init = function (token, config, name) {
     if (_.isUndefined(name)) {
         console.error('You must name your new library: init(token, config, name)');
         return;
     }
     if (name === PRIMARY_INSTANCE_NAME) {
-        console.error('You must initialize the main mixpanel object right after you include the Mixpanel js snippet');
+        console.error('You must initialize the main greenfinch object right after you include the Greenfinch js snippet');
         return;
     }
 
     var instance = create_mplib(token, config, name);
-    mixpanel_master[name] = instance;
+    greenfinch_master[name] = instance;
     instance._loaded();
 
     return instance;
 };
 
-// mixpanel._init(token:string, config:object, name:string)
+// greenfinch._init(token:string, config:object, name:string)
 //
-// This function sets up the current instance of the mixpanel
+// This function sets up the current instance of the greenfinch
 // library.  The difference between this method and the init(...)
 // method is this one initializes the actual instance, whereas the
 // init(...) method sets up a new library and calls _init on it.
 //
-MixpanelLib.prototype._init = function(token, config, name) {
+GreenfinchLib.prototype._init = function (token, config, name) {
     this['__loaded'] = true;
     this['config'] = {};
     this['_triggered_notifs'] = [];
@@ -259,7 +252,8 @@ MixpanelLib.prototype._init = function(token, config, name) {
         'callback_fn': ((name === PRIMARY_INSTANCE_NAME) ? name : PRIMARY_INSTANCE_NAME + '.' + name) + '._jsc'
     }));
 
-    this['_jsc'] = function() {};
+    this['_jsc'] = function () {
+    };
 
     this.__dom_loaded_queue = [];
     this.__request_queue = [];
@@ -275,22 +269,22 @@ MixpanelLib.prototype._init = function(token, config, name) {
     if (this._batch_requests) {
         if (!_.localStorage.is_supported(true) || !USE_XHR) {
             this._batch_requests = false;
-            console.log('Turning off Mixpanel request-queueing; needs XHR and localStorage support');
+            console.log('Turning off Greenfinch request-queueing; needs XHR and localStorage support');
         } else {
             this.start_batch_requests();
             if (sendBeacon && window.addEventListener) {
-                window.addEventListener('unload', _.bind(function() {
+                window.addEventListener('unload', _.bind(function () {
                     // Before page closes, attempt to flush any events queued up via navigator.sendBeacon.
                     // Since sendBeacon doesn't report success/failure, events will not be removed from
                     // the persistent store; if the site is loaded again, the events will be flushed again
-                    // on startup and deduplicated on the Mixpanel server side.
+                    // on startup and deduplicated on the Greenfinch server side.
                     this.request_batchers.events.flush({sendBeacon: true});
                 }, this));
             }
         }
     }
 
-    this['persistence'] = this['cookie'] = new MixpanelPersistence(this['config']);
+    this['persistence'] = this['cookie'] = new GreenfinchPersistence(this['config']);
     this._gdpr_init();
 
     var uuid = _.UUID();
@@ -307,13 +301,13 @@ MixpanelLib.prototype._init = function(token, config, name) {
 
 // Private methods
 
-MixpanelLib.prototype._loaded = function() {
+GreenfinchLib.prototype._loaded = function () {
     this.get_config('loaded')(this);
     this._set_default_superprops();
 };
 
 // update persistence with info on referrer, UTM params, etc
-MixpanelLib.prototype._set_default_superprops = function() {
+GreenfinchLib.prototype._set_default_superprops = function () {
     this['persistence'].update_search_keyword(document.referrer);
     if (this.get_config('store_google')) {
         this['persistence'].update_campaign_params();
@@ -323,13 +317,13 @@ MixpanelLib.prototype._set_default_superprops = function() {
     }
 };
 
-MixpanelLib.prototype._dom_loaded = function() {
-    _.each(this.__dom_loaded_queue, function(item) {
+GreenfinchLib.prototype._dom_loaded = function () {
+    _.each(this.__dom_loaded_queue, function (item) {
         this._track_dom.apply(this, item);
     }, this);
 
     if (!this.has_opted_out_tracking()) {
-        _.each(this.__request_queue, function(item) {
+        _.each(this.__request_queue, function (item) {
             this._send_request.apply(this, item);
         }, this);
     }
@@ -338,7 +332,7 @@ MixpanelLib.prototype._dom_loaded = function() {
     delete this.__request_queue;
 };
 
-MixpanelLib.prototype._track_dom = function(DomClass, args) {
+GreenfinchLib.prototype._track_dom = function (DomClass, args) {
     if (this.get_config('img')) {
         console.error('You can\'t use DOM tracking functions with img = true.');
         return false;
@@ -362,13 +356,13 @@ MixpanelLib.prototype._track_dom = function(DomClass, args) {
  * If we are going to use script tags, this returns a string to use as the
  * callback GET param.
  */
-MixpanelLib.prototype._prepare_callback = function(callback, data) {
+GreenfinchLib.prototype._prepare_callback = function (callback, data) {
     if (_.isUndefined(callback)) {
         return null;
     }
 
     if (USE_XHR) {
-        var callback_function = function(response) {
+        var callback_function = function (response) {
             callback(response, data);
         };
         return callback_function;
@@ -379,7 +373,7 @@ MixpanelLib.prototype._prepare_callback = function(callback, data) {
         var jsc = this['_jsc'];
         var randomized_cb = '' + Math.floor(Math.random() * 100000000);
         var callback_string = this.get_config('callback_fn') + '[' + randomized_cb + ']';
-        jsc[randomized_cb] = function(response) {
+        jsc[randomized_cb] = function (response) {
             delete jsc[randomized_cb];
             callback(response, data);
         };
@@ -387,7 +381,7 @@ MixpanelLib.prototype._prepare_callback = function(callback, data) {
     }
 };
 
-MixpanelLib.prototype._send_request = function(url, data, options, callback) {
+GreenfinchLib.prototype._send_request = function (url, data, options, callback) {
     var succeeded = true;
 
     if (ENQUEUE_REQUESTS) {
@@ -415,11 +409,19 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
 
     // needed to correctly format responses
     var verbose_mode = options.verbose;
-    if (data['verbose']) { verbose_mode = true; }
+    if (data['verbose']) {
+        verbose_mode = true;
+    }
 
-    if (this.get_config('test')) { data['test'] = 1; }
-    if (verbose_mode) { data['verbose'] = 1; }
-    if (this.get_config('img')) { data['img'] = 1; }
+    if (this.get_config('test')) {
+        data['test'] = 1;
+    }
+    if (verbose_mode) {
+        data['verbose'] = 1;
+    }
+    if (this.get_config('img')) {
+        data['img'] = 1;
+    }
     if (!USE_XHR) {
         if (callback) {
             data['callback'] = callback;
@@ -432,15 +434,15 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
         }
     }
 
-    data['ip'] = this.get_config('ip')?1:0;
+    data['ip'] = this.get_config('ip') ? 1 : 0;
     data['_'] = new Date().getTime().toString();
 
     if (use_post) {
-        body_data = 'data=' + data['data'];
+        body_data = data['data'];
         delete data['data'];
     }
 
-    url += '?' + _.HTTPBuildQuery(data);
+    // url += '?' + _.HTTPBuildQuery(data);
 
     if ('img' in data) {
         var img = document.createElement('img');
@@ -460,9 +462,11 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
 
             var headers = this.get_config('xhr_headers');
             if (use_post) {
-                headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                headers['Content-Type'] = 'application/json';
+                headers['jwt'] = this.get_config('token');
+                headers['label'] = 'web';
             }
-            _.each(headers, function(headerValue, headerName) {
+            _.each(headers, function (headerValue, headerName) {
                 req.setRequestHeader(headerName, headerValue);
             });
 
@@ -536,29 +540,29 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
 };
 
 /**
- * _execute_array() deals with processing any mixpanel function
- * calls that were called before the Mixpanel library were loaded
+ * _execute_array() deals with processing any greenfinch function
+ * calls that were called before the Greenfinch library were loaded
  * (and are thus stored in an array so they can be called later)
  *
- * Note: we fire off all the mixpanel function calls && user defined
- * functions BEFORE we fire off mixpanel tracking calls. This is so
+ * Note: we fire off all the greenfinch function calls && user defined
+ * functions BEFORE we fire off greenfinch tracking calls. This is so
  * identify/register/set_config calls can properly modify early
  * tracking calls.
  *
  * @param {Array} array
  */
-MixpanelLib.prototype._execute_array = function(array) {
+GreenfinchLib.prototype._execute_array = function (array) {
     var fn_name, alias_calls = [], other_calls = [], tracking_calls = [];
-    _.each(array, function(item) {
+    _.each(array, function (item) {
         if (item) {
             fn_name = item[0];
             if (_.isArray(fn_name)) {
-                tracking_calls.push(item); // chained call e.g. mixpanel.get_group().set()
-            } else if (typeof(item) === 'function') {
+                tracking_calls.push(item); // chained call e.g. greenfinch.get_group().set()
+            } else if (typeof (item) === 'function') {
                 item.call(this);
             } else if (_.isArray(item) && fn_name === 'alias') {
                 alias_calls.push(item);
-            } else if (_.isArray(item) && fn_name.indexOf('track') !== -1 && typeof(this[fn_name]) === 'function') {
+            } else if (_.isArray(item) && fn_name.indexOf('track') !== -1 && typeof (this[fn_name]) === 'function') {
                 tracking_calls.push(item);
             } else {
                 other_calls.push(item);
@@ -566,12 +570,12 @@ MixpanelLib.prototype._execute_array = function(array) {
         }
     }, this);
 
-    var execute = function(calls, context) {
-        _.each(calls, function(item) {
+    var execute = function (calls, context) {
+        _.each(calls, function (item) {
             if (_.isArray(item[0])) {
                 // chained call
                 var caller = context;
-                _.each(item, function(call) {
+                _.each(item, function (call) {
                     caller = caller[call[0]].apply(caller, call.slice(1));
                 });
             } else {
@@ -587,12 +591,12 @@ MixpanelLib.prototype._execute_array = function(array) {
 
 // request queueing utils
 
-MixpanelLib.prototype.start_batch_requests = function() {
+GreenfinchLib.prototype.start_batch_requests = function () {
     var token = this.get_config('token');
     if (!this.request_batchers.events) { // no batchers initialized yet
         var batcher_config = {
             libConfig: this['config'],
-            sendRequestFunc: _.bind(function(endpoint, data, options, cb) {
+            sendRequestFunc: _.bind(function (endpoint, data, options, cb) {
                 this._send_request(
                     this.get_config('api_host') + endpoint,
                     encode_data_for_request(data),
@@ -607,14 +611,14 @@ MixpanelLib.prototype.start_batch_requests = function() {
             groups: new RequestBatcher('__mpq_' + token + '_gr', '/groups/', batcher_config)
         };
     }
-    _.each(this.request_batchers, function(batcher) {
+    _.each(this.request_batchers, function (batcher) {
         batcher.start();
     });
 };
 
-MixpanelLib.prototype.stop_batch_requests = function() {
+GreenfinchLib.prototype.stop_batch_requests = function () {
     this._batch_requests = false;
-    _.each(this.request_batchers, function(batcher) {
+    _.each(this.request_batchers, function (batcher) {
         batcher.stop();
         batcher.clear();
     });
@@ -628,27 +632,27 @@ MixpanelLib.prototype.stop_batch_requests = function() {
  * (created in the snippet).
  *
  * ### Usage:
- *     mixpanel.push(['register', { a: 'b' }]);
+ *     greenfinch.push(['register', { a: 'b' }]);
  *
  * @param {Array} item A [function_name, args...] array to be executed
  */
-MixpanelLib.prototype.push = function(item) {
+GreenfinchLib.prototype.push = function (item) {
     this._execute_array([item]);
 };
 
 /**
- * Disable events on the Mixpanel object. If passed no arguments,
+ * Disable events on the Greenfinch object. If passed no arguments,
  * this function disables tracking of any event. If passed an
  * array of event names, those events will be disabled, but other
  * events will continue to be tracked.
  *
- * Note: this function does not stop other mixpanel functions from
+ * Note: this function does not stop other greenfinch functions from
  * firing, such as register() or people.set().
  *
  * @param {Array} [events] An array of event names to disable
  */
-MixpanelLib.prototype.disable = function(events) {
-    if (typeof(events) === 'undefined') {
+GreenfinchLib.prototype.disable = function (events) {
+    if (typeof (events) === 'undefined') {
         this._flags.disable_all_events = true;
     } else {
         this.__disabled_events = this.__disabled_events.concat(events);
@@ -656,18 +660,19 @@ MixpanelLib.prototype.disable = function(events) {
 };
 
 // internal method for handling track vs batch-enqueue logic
-MixpanelLib.prototype._track_or_batch = function(options, callback) {
+GreenfinchLib.prototype._track_or_batch = function (options, callback) {
     var truncated_data = options.truncated_data;
     var endpoint = options.endpoint;
     var batcher = options.batcher;
     var should_send_immediately = options.should_send_immediately;
     var send_request_options = options.send_request_options || {};
-    callback = callback || function() {};
+    callback = callback || function () {
+    };
 
     var request_enqueued_or_initiated = true;
-    var send_request_immediately = _.bind(function() {
-        console.log('MIXPANEL REQUEST:');
-        console.log(truncated_data);
+    var send_request_immediately = _.bind(function () {
+        // console.log('MIXPANEL REQUEST:');
+        // console.log(truncated_data);
         return this._send_request(
             endpoint,
             encode_data_for_request(truncated_data),
@@ -677,7 +682,7 @@ MixpanelLib.prototype._track_or_batch = function(options, callback) {
     }, this);
 
     if (this._batch_requests && !should_send_immediately) {
-        batcher.enqueue(truncated_data, function(succeeded) {
+        batcher.enqueue(truncated_data, function (succeeded) {
             if (succeeded) {
                 callback(1, truncated_data);
             } else {
@@ -693,15 +698,15 @@ MixpanelLib.prototype._track_or_batch = function(options, callback) {
 
 /**
  * Track an event. This is the most important and
- * frequently used Mixpanel function.
+ * frequently used Greenfinch function.
  *
  * ### Usage:
  *
  *     // track an event named 'Registered'
- *     mixpanel.track('Registered', {'Gender': 'Male', 'Age': 21});
+ *     greenfinch.track('Registered', {'Gender': 'Male', 'Age': 21});
  *
  *     // track an event using navigator.sendBeacon
- *     mixpanel.track('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
+ *     greenfinch.track('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
  *
  * To track link clicks or form submissions, see track_links() or track_forms().
  *
@@ -714,7 +719,7 @@ MixpanelLib.prototype._track_or_batch = function(options, callback) {
  * @returns {Boolean|Object} If the tracking request was successfully initiated/queued, an object
  * with the tracking payload sent to the API server is returned; otherwise false.
  */
-MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, properties, options, callback) {
+GreenfinchLib.prototype.track = addOptOutCheckGreenfinchLib(function (event_name, properties, options, callback) {
     if (!callback && typeof options === 'function') {
         callback = options;
         options = null;
@@ -726,11 +731,12 @@ MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, pro
     }
     var should_send_immediately = options['send_immediately'];
     if (typeof callback !== 'function') {
-        callback = function() {};
+        callback = function () {
+        };
     }
 
     if (_.isUndefined(event_name)) {
-        console.error('No event name provided to mixpanel.track');
+        console.error('No event name provided to greenfinch.track');
         return;
     }
 
@@ -764,9 +770,14 @@ MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, pro
         properties
     );
 
+    if ('distinct_id' in properties) {
+        properties['session_id'] = properties['distinct_id']
+        delete properties['distinct_id'];
+    }
+
     var property_blacklist = this.get_config('property_blacklist');
     if (_.isArray(property_blacklist)) {
-        _.each(property_blacklist, function(blacklisted_prop) {
+        _.each(property_blacklist, function (blacklisted_prop) {
             delete properties[blacklisted_prop];
         });
     } else {
@@ -775,11 +786,11 @@ MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, pro
 
     var data = {
         'event': event_name,
-        'properties': properties
+        'prop': properties
     };
     var ret = this._track_or_batch({
         truncated_data: _.truncate(data, 255),
-        endpoint: this.get_config('api_host') + '/track/',
+        endpoint: this.get_config('debug') ? this.get_config('api_host_debug') + this.get_config('service_name') : this.get_config('api_host') + this.get_config('service_name'),
         batcher: this.request_batchers.events,
         should_send_immediately: should_send_immediately,
         send_request_options: options
@@ -795,16 +806,16 @@ MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, pro
  *
  * ### Usage:
  *
- *      mixpanel.set_group('company', ['mixpanel', 'google']) // an array of IDs
- *      mixpanel.set_group('company', 'mixpanel')
- *      mixpanel.set_group('company', 128746312)
+ *      greenfinch.set_group('company', ['greenfinch', 'google']) // an array of IDs
+ *      greenfinch.set_group('company', 'greenfinch')
+ *      greenfinch.set_group('company', 128746312)
  *
  * @param {String} group_key Group key
  * @param {Array|String|Number} group_ids An array of group IDs, or a singular group ID
  * @param {Function} [callback] If provided, the callback will be called after tracking the event.
  *
  */
-MixpanelLib.prototype.set_group = addOptOutCheckMixpanelLib(function(group_key, group_ids, callback) {
+GreenfinchLib.prototype.set_group = addOptOutCheckGreenfinchLib(function (group_key, group_ids, callback) {
     if (!_.isArray(group_ids)) {
         group_ids = [group_ids];
     }
@@ -819,13 +830,13 @@ MixpanelLib.prototype.set_group = addOptOutCheckMixpanelLib(function(group_key, 
  *
  * ### Usage:
  *
- *      mixpanel.add_group('company', 'mixpanel')
+ *      greenfinch.add_group('company', 'greenfinch')
  *
  * @param {String} group_key Group key
- * @param {*} group_id A valid Mixpanel property type
+ * @param {*} group_id A valid Greenfinch property type
  * @param {Function} [callback] If provided, the callback will be called after tracking the event.
  */
-MixpanelLib.prototype.add_group = addOptOutCheckMixpanelLib(function(group_key, group_id, callback) {
+GreenfinchLib.prototype.add_group = addOptOutCheckGreenfinchLib(function (group_key, group_id, callback) {
     var old_values = this.get_property(group_key);
     if (old_values === undefined) {
         var prop = {};
@@ -845,13 +856,13 @@ MixpanelLib.prototype.add_group = addOptOutCheckMixpanelLib(function(group_key, 
  *
  * ### Usage:
  *
- *      mixpanel.remove_group('company', 'mixpanel')
+ *      greenfinch.remove_group('company', 'greenfinch')
  *
  * @param {String} group_key Group key
- * @param {*} group_id A valid Mixpanel property type
+ * @param {*} group_id A valid Greenfinch property type
  * @param {Function} [callback] If provided, the callback will be called after tracking the event.
  */
-MixpanelLib.prototype.remove_group = addOptOutCheckMixpanelLib(function(group_key, group_id, callback) {
+GreenfinchLib.prototype.remove_group = addOptOutCheckGreenfinchLib(function (group_key, group_id, callback) {
     var old_value = this.get_property(group_key);
     // if the value doesn't exist, the persistent store is unchanged
     if (old_value !== undefined) {
@@ -872,16 +883,16 @@ MixpanelLib.prototype.remove_group = addOptOutCheckMixpanelLib(function(group_ke
  *
  * ### Usage:
  *
- *      mixpanel.track_with_groups('purchase', {'product': 'iphone'}, {'University': ['UCB', 'UCLA']})
+ *      greenfinch.track_with_groups('purchase', {'product': 'iphone'}, {'University': ['UCB', 'UCLA']})
  *
- * @param {String} event_name The name of the event (see `mixpanel.track()`)
- * @param {Object=} properties A set of properties to include with the event you're sending (see `mixpanel.track()`)
+ * @param {String} event_name The name of the event (see `greenfinch.track()`)
+ * @param {Object=} properties A set of properties to include with the event you're sending (see `greenfinch.track()`)
  * @param {Object=} groups An object mapping group name keys to one or more values
  * @param {Function} [callback] If provided, the callback will be called after tracking the event.
  */
-MixpanelLib.prototype.track_with_groups = addOptOutCheckMixpanelLib(function(event_name, properties, groups, callback) {
+GreenfinchLib.prototype.track_with_groups = addOptOutCheckGreenfinchLib(function (event_name, properties, groups, callback) {
     var tracking_props = _.extend({}, properties || {});
-    _.each(groups, function(v, k) {
+    _.each(groups, function (v, k) {
         if (v !== null && v !== undefined) {
             tracking_props[k] = v;
         }
@@ -889,30 +900,30 @@ MixpanelLib.prototype.track_with_groups = addOptOutCheckMixpanelLib(function(eve
     return this.track(event_name, tracking_props, callback);
 });
 
-MixpanelLib.prototype._create_map_key = function (group_key, group_id) {
+GreenfinchLib.prototype._create_map_key = function (group_key, group_id) {
     return group_key + '_' + JSON.stringify(group_id);
 };
 
-MixpanelLib.prototype._remove_group_from_cache = function (group_key, group_id) {
+GreenfinchLib.prototype._remove_group_from_cache = function (group_key, group_id) {
     delete this._cached_groups[this._create_map_key(group_key, group_id)];
 };
 
 /**
- * Look up reference to a Mixpanel group
+ * Look up reference to a Greenfinch group
  *
  * ### Usage:
  *
- *       mixpanel.get_group(group_key, group_id)
+ *       greenfinch.get_group(group_key, group_id)
  *
  * @param {String} group_key Group key
- * @param {Object} group_id A valid Mixpanel property type
- * @returns {Object} A MixpanelGroup identifier
+ * @param {Object} group_id A valid Greenfinch property type
+ * @returns {Object} A GreenfinchGroup identifier
  */
-MixpanelLib.prototype.get_group = function (group_key, group_id) {
+GreenfinchLib.prototype.get_group = function (group_key, group_id) {
     var map_key = this._create_map_key(group_key, group_id);
     var group = this._cached_groups[map_key];
     if (group === undefined || group._group_key !== group_key || group._group_id !== group_id) {
-        group = new MixpanelGroup();
+        group = new GreenfinchGroup();
         group._init(this, group_key, group_id);
         this._cached_groups[map_key] = group;
     }
@@ -920,16 +931,13 @@ MixpanelLib.prototype.get_group = function (group_key, group_id) {
 };
 
 /**
- * Track mp_page_view event. This is now ignored by the server.
+ * Track page_view event.
  *
- * @param {String} [page] The url of the page to record. If you don't include this, it defaults to the current url.
- * @deprecated
  */
-MixpanelLib.prototype.track_pageview = function(page) {
-    if (_.isUndefined(page)) {
-        page = document.location.href;
-    }
-    this.track('mp_page_view', _.info.pageviewInfo(page));
+GreenfinchLib.prototype.page = function () {
+    this.track('$web_event', _.extend({
+        '$title': document.title
+    }, autotrack._getDefaultProperties('pageview')));
 };
 
 /**
@@ -939,11 +947,11 @@ MixpanelLib.prototype.track_pageview = function(page) {
  * ### Usage:
  *
  *     // track click for link id #nav
- *     mixpanel.track_links('#nav', 'Clicked Nav Link');
+ *     greenfinch.track_links('#nav', 'Clicked Nav Link');
  *
  * ### Notes:
  *
- * This function will wait up to 300 ms for the Mixpanel
+ * This function will wait up to 300 ms for the Greenfinch
  * servers to respond. If they have not responded by that time
  * it will head to the link without ensuring that your event
  * has been tracked.  To configure this timeout please see the
@@ -953,14 +961,14 @@ MixpanelLib.prototype.track_pageview = function(page) {
  * function will receive the DOMElement that triggered the
  * event as an argument.  You are expected to return an object
  * from the function; any properties defined on this object
- * will be sent to mixpanel as event properties.
+ * will be sent to greenfinch as event properties.
  *
  * @type {Function}
  * @param {Object|String} query A valid DOM query, element or jQuery-esque list
  * @param {String} event_name The name of the event to track
  * @param {Object|Function} [properties] A properties object or function that returns a dictionary of properties when passed a DOMElement
  */
-MixpanelLib.prototype.track_links = function() {
+GreenfinchLib.prototype.track_links = function () {
     return this._track_dom.call(this, LinkTracker, arguments);
 };
 
@@ -970,11 +978,11 @@ MixpanelLib.prototype.track_links = function() {
  * ### Usage:
  *
  *     // track submission for form id 'register'
- *     mixpanel.track_forms('#register', 'Created Account');
+ *     greenfinch.track_forms('#register', 'Created Account');
  *
  * ### Notes:
  *
- * This function will wait up to 300 ms for the mixpanel
+ * This function will wait up to 300 ms for the greenfinch
  * servers to respond, if they have not responded by that time
  * it will head to the link without ensuring that your event
  * has been tracked.  To configure this timeout please see the
@@ -984,14 +992,14 @@ MixpanelLib.prototype.track_links = function() {
  * function will receive the DOMElement that triggered the
  * event as an argument.  You are expected to return an object
  * from the function; any properties defined on this object
- * will be sent to mixpanel as event properties.
+ * will be sent to greenfinch as event properties.
  *
  * @type {Function}
  * @param {Object|String} query A valid DOM query, element or jQuery-esque list
  * @param {String} event_name The name of the event to track
  * @param {Object|Function} [properties] This can be a set of properties, or a function that returns a set of properties after being passed a DOMElement
  */
-MixpanelLib.prototype.track_forms = function() {
+GreenfinchLib.prototype.track_forms = function () {
     return this._track_dom.call(this, FormTracker, arguments);
 };
 
@@ -1003,8 +1011,8 @@ MixpanelLib.prototype.track_forms = function() {
  * ### Usage:
  *
  *     // time an event named 'Registered'
- *     mixpanel.time_event('Registered');
- *     mixpanel.track('Registered', {'Gender': 'Male', 'Age': 21});
+ *     greenfinch.time_event('Registered');
+ *     greenfinch.track('Registered', {'Gender': 'Male', 'Age': 21});
  *
  * When called for a particular event name, the next track call for that event
  * name will include the elapsed time between the 'time_event' and 'track'
@@ -1012,9 +1020,9 @@ MixpanelLib.prototype.track_forms = function() {
  *
  * @param {String} event_name The name of the event.
  */
-MixpanelLib.prototype.time_event = function(event_name) {
+GreenfinchLib.prototype.time_event = function (event_name) {
     if (_.isUndefined(event_name)) {
-        console.error('No event name provided to mixpanel.time_event');
+        console.error('No event name provided to greenfinch.time_event');
         return;
     }
 
@@ -1022,7 +1030,7 @@ MixpanelLib.prototype.time_event = function(event_name) {
         return;
     }
 
-    this['persistence'].set_event_timer(event_name,  new Date().getTime());
+    this['persistence'].set_event_timer(event_name, new Date().getTime());
 };
 
 /**
@@ -1032,10 +1040,10 @@ MixpanelLib.prototype.time_event = function(event_name) {
  * ### Usage:
  *
  *     // register 'Gender' as a super property
- *     mixpanel.register({'Gender': 'Female'});
+ *     greenfinch.register({'Gender': 'Female'});
  *
  *     // register several super properties when a user signs up
- *     mixpanel.register({
+ *     greenfinch.register({
  *         'Email': 'jdoe@example.com',
  *         'Account Type': 'Free'
  *     });
@@ -1043,7 +1051,7 @@ MixpanelLib.prototype.time_event = function(event_name) {
  * @param {Object} properties An associative array of properties to store about the user
  * @param {Number} [days] How many days since the user's last visit to store the super properties
  */
-MixpanelLib.prototype.register = function(props, days) {
+GreenfinchLib.prototype.register = function (props, days) {
     this['persistence'].register(props, days);
 };
 
@@ -1054,7 +1062,7 @@ MixpanelLib.prototype.register = function(props, days) {
  * ### Usage:
  *
  *     // register a super property for the first time only
- *     mixpanel.register_once({
+ *     greenfinch.register_once({
  *         'First Login Date': new Date().toISOString()
  *     });
  *
@@ -1067,7 +1075,7 @@ MixpanelLib.prototype.register = function(props, days) {
  * @param {*} [default_value] Value to override if already set in super properties (ex: 'False') Default: 'None'
  * @param {Number} [days] How many days since the users last visit to store the super properties
  */
-MixpanelLib.prototype.register_once = function(props, default_value, days) {
+GreenfinchLib.prototype.register_once = function (props, default_value, days) {
     this['persistence'].register_once(props, default_value, days);
 };
 
@@ -1076,11 +1084,11 @@ MixpanelLib.prototype.register_once = function(props, default_value, days) {
  *
  * @param {String} property The name of the super property to remove
  */
-MixpanelLib.prototype.unregister = function(property) {
+GreenfinchLib.prototype.unregister = function (property) {
     this['persistence'].unregister(property);
 };
 
-MixpanelLib.prototype._register_single = function(prop, value) {
+GreenfinchLib.prototype._register_single = function (prop, value) {
     var props = {};
     props[prop] = value;
     this.register(props);
@@ -1098,7 +1106,7 @@ MixpanelLib.prototype._register_single = function(prop, value) {
  *
  * ### Notes:
  * If your project has
- * <a href="https://help.mixpanel.com/hc/en-us/articles/360039133851">ID Merge</a>
+ * <a href="https://help.greenfinch.com/hc/en-us/articles/360039133851">ID Merge</a>
  * enabled, the identify method will connect pre- and
  * post-authentication events when appropriate.
  *
@@ -1110,7 +1118,7 @@ MixpanelLib.prototype._register_single = function(prop, value) {
  *
  * @param {String} [unique_id] A string that uniquely identifies a user. If not provided, the distinct_id currently in the persistent store (cookie or localStorage) will be used.
  */
-MixpanelLib.prototype.identify = function(
+GreenfinchLib.prototype.identify = function (
     new_distinct_id, _set_callback, _add_callback, _append_callback, _set_once_callback, _union_callback, _unset_callback, _remove_callback
 ) {
     // Optional Parameters
@@ -1140,23 +1148,23 @@ MixpanelLib.prototype.identify = function(
         this.unregister(ALIAS_ID_KEY);
         this.register({'distinct_id': new_distinct_id});
     }
-    this._check_and_handle_notifications(this.get_distinct_id());
+    // this._check_and_handle_notifications(this.get_distinct_id());
     this._flags.identify_called = true;
     // Flush any queued up people requests
     this['people']._flush(_set_callback, _add_callback, _append_callback, _set_once_callback, _union_callback, _unset_callback, _remove_callback);
 
     // send an $identify event any time the distinct_id is changing - logic on the server
     // will determine whether or not to do anything with it.
-    if (new_distinct_id !== previous_distinct_id) {
-        this.track('$identify', { 'distinct_id': new_distinct_id, '$anon_distinct_id': previous_distinct_id });
-    }
+    // if (new_distinct_id !== previous_distinct_id) {
+    //     this.track('$identify', { 'distinct_id': new_distinct_id, '$anon_distinct_id': previous_distinct_id });
+    // }
 };
 
 /**
  * Clears super properties and generates a new random distinct_id for this instance.
  * Useful for clearing data when a user logs out.
  */
-MixpanelLib.prototype.reset = function() {
+GreenfinchLib.prototype.reset = function () {
     this['persistence'].clear();
     this._flags.identify_called = false;
     var uuid = _.UUID();
@@ -1172,48 +1180,48 @@ MixpanelLib.prototype.reset = function() {
  *
  * ### Notes:
  *
- * get_distinct_id() can only be called after the Mixpanel library has finished loading.
+ * get_distinct_id() can only be called after the Greenfinch library has finished loading.
  * init() has a loaded function available to handle this automatically. For example:
  *
- *     // set distinct_id after the mixpanel library has loaded
- *     mixpanel.init('YOUR PROJECT TOKEN', {
- *         loaded: function(mixpanel) {
- *             distinct_id = mixpanel.get_distinct_id();
+ *     // set distinct_id after the greenfinch library has loaded
+ *     greenfinch.init('YOUR PROJECT TOKEN', {
+ *         loaded: function(greenfinch) {
+ *             distinct_id = greenfinch.get_distinct_id();
  *         }
  *     });
  */
-MixpanelLib.prototype.get_distinct_id = function() {
+GreenfinchLib.prototype.get_distinct_id = function () {
     return this.get_property('distinct_id');
 };
 
 /**
- * The alias method creates an alias which Mixpanel will use to
+ * The alias method creates an alias which Greenfinch will use to
  * remap one id to another. Multiple aliases can point to the
  * same identifier.
  *
  * The following is a valid use of alias:
  *
- *     mixpanel.alias('new_id', 'existing_id');
+ *     greenfinch.alias('new_id', 'existing_id');
  *     // You can add multiple id aliases to the existing ID
- *     mixpanel.alias('newer_id', 'existing_id');
+ *     greenfinch.alias('newer_id', 'existing_id');
  *
  * Aliases can also be chained - the following is a valid example:
  *
- *     mixpanel.alias('new_id', 'existing_id');
+ *     greenfinch.alias('new_id', 'existing_id');
  *     // chain newer_id - new_id - existing_id
- *     mixpanel.alias('newer_id', 'new_id');
+ *     greenfinch.alias('newer_id', 'new_id');
  *
  * Aliases cannot point to multiple identifiers - the following
  * example will not work:
  *
- *     mixpanel.alias('new_id', 'existing_id');
+ *     greenfinch.alias('new_id', 'existing_id');
  *     // this is invalid as 'new_id' already points to 'existing_id'
- *     mixpanel.alias('new_id', 'newer_id');
+ *     greenfinch.alias('new_id', 'newer_id');
  *
  * ### Notes:
  *
  * If your project does not have
- * <a href="https://help.mixpanel.com/hc/en-us/articles/360039133851">ID Merge</a>
+ * <a href="https://help.greenfinch.com/hc/en-us/articles/360039133851">ID Merge</a>
  * enabled, the best practice is to call alias once when a unique
  * ID is first created for a user (e.g., when a user first registers
  * for an account). Do not use alias multiple times for a single
@@ -1222,9 +1230,9 @@ MixpanelLib.prototype.get_distinct_id = function() {
  * @param {String} alias A unique identifier that you want to use for this user in the future.
  * @param {String} [original] The current identifier being used for this user.
  */
-MixpanelLib.prototype.alias = function(alias, original) {
+GreenfinchLib.prototype.alias = function (alias, original) {
     // If the $people_distinct_id key exists in persistence, there has been a previous
-    // mixpanel.people.identify() call made for this user. It is VERY BAD to make an alias with
+    // greenfinch.people.identify() call made for this user. It is VERY BAD to make an alias with
     // this ID, as it will duplicate users.
     if (alias === this.get_property(PEOPLE_DISTINCT_ID_KEY)) {
         console.critical('Attempting to create alias for existing People user - aborting.');
@@ -1237,7 +1245,7 @@ MixpanelLib.prototype.alias = function(alias, original) {
     }
     if (alias !== original) {
         this._register_single(ALIAS_ID_KEY, alias);
-        return this.track('$create_alias', { 'alias': alias, 'distinct_id': original }, function() {
+        return this.track('$create_alias', {'alias': alias, 'distinct_id': original}, function () {
             // Flush the people queue
             _this.identify(alias);
         });
@@ -1250,7 +1258,7 @@ MixpanelLib.prototype.alias = function(alias, original) {
 
 /**
  * Provide a string to recognize the user by. The string passed to
- * this method will appear in the Mixpanel Streams product rather
+ * this method will appear in the Greenfinch Streams product rather
  * than an automatically generated name. Name tags do not have to
  * be unique.
  *
@@ -1259,12 +1267,12 @@ MixpanelLib.prototype.alias = function(alias, original) {
  * @param {String} name_tag A human readable name for the user
  * @deprecated
  */
-MixpanelLib.prototype.name_tag = function(name_tag) {
+GreenfinchLib.prototype.name_tag = function (name_tag) {
     this._register_single('mp_name_tag', name_tag);
 };
 
 /**
- * Update the configuration of a mixpanel library instance.
+ * Update the configuration of a greenfinch library instance.
  *
  * The default config is:
  *
@@ -1276,7 +1284,7 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *       // NB: sendBeacon should only be used for scenarios such as
  *       // page unload where a "best-effort" attempt to send is
  *       // acceptable; the sendBeacon API does not support callbacks
- *       // or any way to know the result of the request. Mixpanel
+ *       // or any way to know the result of the request. Greenfinch
  *       // tracking via sendBeacon will not support any event-
  *       // batching or retry mechanisms.
  *       api_transport: 'XHR'
@@ -1306,7 +1314,7 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *
  *       // if true, cookie will be set with SameSite=None; Secure
  *       // this is only useful in special situations, like embedded
- *       // 3rd-party iframes that set up a Mixpanel instance
+ *       // 3rd-party iframes that set up a Greenfinch instance
  *       cross_site_cookie: false
  *
  *       // super properties span subdomains
@@ -1315,19 +1323,19 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *       // debug mode
  *       debug: false
  *
- *       // if this is true, the mixpanel cookie or localStorage entry
+ *       // if this is true, the greenfinch cookie or localStorage entry
  *       // will be deleted, and no user persistence will take place
  *       disable_persistence: false
  *
- *       // if this is true, Mixpanel will automatically determine
+ *       // if this is true, Greenfinch will automatically determine
  *       // City, Region and Country data using the IP address of
  *       //the client
  *       ip: true
  *
- *       // opt users out of tracking by this Mixpanel instance by default
+ *       // opt users out of tracking by this Greenfinch instance by default
  *       opt_out_tracking_by_default: false
  *
- *       // opt users out of browser data storage by this Mixpanel instance by default
+ *       // opt users out of browser data storage by this Greenfinch instance by default
  *       opt_out_persistence_by_default: false
  *
  *       // persistence mechanism used by opt-in/opt-out methods - cookie
@@ -1339,7 +1347,7 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *
  *       // type of persistent store for super properties (cookie/
  *       // localStorage) if set to 'localStorage', any existing
- *       // mixpanel cookie value with the same persistence_name
+ *       // greenfinch cookie value with the same persistence_name
  *       // will be transferred to localStorage and deleted
  *       persistence: 'cookie'
  *
@@ -1350,12 +1358,12 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *       // be sent with track() calls
  *       property_blacklist: []
  *
- *       // if this is true, mixpanel cookies will be marked as
+ *       // if this is true, greenfinch cookies will be marked as
  *       // secure, meaning they will only be transmitted over https
  *       secure_cookie: false
  *
  *       // the amount of time track_links will
- *       // wait for Mixpanel's servers to respond
+ *       // wait for Greenfinch's servers to respond
  *       track_links_timeout: 300
  *
  *       // if you set upgrade to be true, the library will check for
@@ -1384,13 +1392,13 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  *
  * @param {Object} config A dictionary of new configuration values to update
  */
-MixpanelLib.prototype.set_config = function(config) {
+GreenfinchLib.prototype.set_config = function (config) {
     if (_.isObject(config)) {
         _.extend(this['config'], config);
 
         var new_batch_size = config['batch_size'];
         if (new_batch_size) {
-            _.each(this.request_batchers, function(batcher) {
+            _.each(this.request_batchers, function (batcher) {
                 batcher.resetBatchSize();
             });
         }
@@ -1412,7 +1420,7 @@ MixpanelLib.prototype.set_config = function(config) {
 /**
  * returns the current config object for the library.
  */
-MixpanelLib.prototype.get_config = function(prop_name) {
+GreenfinchLib.prototype.get_config = function (prop_name) {
     return this['config'][prop_name];
 };
 
@@ -1422,23 +1430,23 @@ MixpanelLib.prototype.get_config = function(prop_name) {
  *
  * ### Notes:
  *
- * get_property() can only be called after the Mixpanel library has finished loading.
+ * get_property() can only be called after the Greenfinch library has finished loading.
  * init() has a loaded function available to handle this automatically. For example:
  *
- *     // grab value for 'user_id' after the mixpanel library has loaded
- *     mixpanel.init('YOUR PROJECT TOKEN', {
- *         loaded: function(mixpanel) {
- *             user_id = mixpanel.get_property('user_id');
+ *     // grab value for 'user_id' after the greenfinch library has loaded
+ *     greenfinch.init('YOUR PROJECT TOKEN', {
+ *         loaded: function(greenfinch) {
+ *             user_id = greenfinch.get_property('user_id');
  *         }
  *     });
  *
  * @param {String} property_name The name of the super property you want to retrieve
  */
-MixpanelLib.prototype.get_property = function(property_name) {
+GreenfinchLib.prototype.get_property = function (property_name) {
     return this['persistence']['props'][property_name];
 };
 
-MixpanelLib.prototype.toString = function() {
+GreenfinchLib.prototype.toString = function () {
     var name = this.get_config('name');
     if (name !== PRIMARY_INSTANCE_NAME) {
         name = PRIMARY_INSTANCE_NAME + '.' + name;
@@ -1446,19 +1454,19 @@ MixpanelLib.prototype.toString = function() {
     return name;
 };
 
-MixpanelLib.prototype._event_is_disabled = function(event_name) {
+GreenfinchLib.prototype._event_is_disabled = function (event_name) {
     return _.isBlockedUA(userAgent) ||
         this._flags.disable_all_events ||
         _.include(this.__disabled_events, event_name);
 };
 
-MixpanelLib.prototype._check_and_handle_triggered_notifications = addOptOutCheckMixpanelLib(function(event_data) {
+GreenfinchLib.prototype._check_and_handle_triggered_notifications = addOptOutCheckGreenfinchLib(function (event_data) {
     if (!this._user_decide_check_complete) {
         this._events_tracked_before_user_decide_check_complete.push(event_data);
     } else {
         var arr = this['_triggered_notifs'];
         for (var i = 0; i < arr.length; i++) {
-            var notif = new MixpanelNotification(arr[i], this);
+            var notif = new GreenfinchNotification(arr[i], this);
             if (notif._matches_event_data(event_data)) {
                 this._show_notification(arr[i]);
                 return;
@@ -1467,7 +1475,7 @@ MixpanelLib.prototype._check_and_handle_triggered_notifications = addOptOutCheck
     }
 });
 
-MixpanelLib.prototype._check_and_handle_notifications = addOptOutCheckMixpanelLib(function(distinct_id) {
+GreenfinchLib.prototype._check_and_handle_notifications = addOptOutCheckGreenfinchLib(function (distinct_id) {
     if (
         !distinct_id ||
         this._flags.identify_called ||
@@ -1479,21 +1487,21 @@ MixpanelLib.prototype._check_and_handle_notifications = addOptOutCheckMixpanelLi
     console.log('MIXPANEL NOTIFICATION CHECK');
 
     var data = {
-        'verbose':     true,
-        'version':     '3',
-        'lib':         'web',
-        'token':       this.get_config('token'),
+        'verbose': true,
+        'version': '3',
+        'lib': 'web',
+        'token': this.get_config('token'),
         'distinct_id': distinct_id
     };
     this._send_request(
         this.get_config('api_host') + '/decide/',
         data,
         {method: 'GET', transport: 'XHR'},
-        this._prepare_callback(_.bind(function(result) {
+        this._prepare_callback(_.bind(function (result) {
             if (result['notifications'] && result['notifications'].length > 0) {
                 this['_triggered_notifs'] = [];
                 var notifications = [];
-                _.each(result['notifications'], function(notif) {
+                _.each(result['notifications'], function (notif) {
                     (notif['display_triggers'] && notif['display_triggers'].length > 0 ? this['_triggered_notifs'] : notifications).push(notif);
                 }, this);
                 if (notifications.length > 0) {
@@ -1505,7 +1513,7 @@ MixpanelLib.prototype._check_and_handle_notifications = addOptOutCheckMixpanelLi
     );
 });
 
-MixpanelLib.prototype._handle_user_decide_check_complete = function() {
+GreenfinchLib.prototype._handle_user_decide_check_complete = function () {
     this._user_decide_check_complete = true;
 
     // check notifications against events that were tracked before decide call completed
@@ -1516,13 +1524,13 @@ MixpanelLib.prototype._handle_user_decide_check_complete = function() {
     }
 };
 
-MixpanelLib.prototype._show_notification = function(notif_data) {
-    var notification = new MixpanelNotification(notif_data, this);
+GreenfinchLib.prototype._show_notification = function (notif_data) {
+    var notification = new GreenfinchNotification(notif_data, this);
     notification.show();
 };
 
 // perform some housekeeping around GDPR opt-in/out state
-MixpanelLib.prototype._gdpr_init = function() {
+GreenfinchLib.prototype._gdpr_init = function () {
     var is_localStorage_requested = this.get_config('opt_out_tracking_persistence_type') === 'localStorage';
 
     // try to convert opt-in/out cookies to localStorage if possible
@@ -1543,9 +1551,9 @@ MixpanelLib.prototype._gdpr_init = function() {
     if (this.has_opted_out_tracking()) {
         this._gdpr_update_persistence({'clear_persistence': true});
 
-    // check whether we should opt out by default
-    // note: we don't clear persistence here by default since opt-out default state is often
-    //       used as an initial state while GDPR information is being collected
+        // check whether we should opt out by default
+        // note: we don't clear persistence here by default since opt-out default state is often
+        //       used as an initial state while GDPR information is being collected
     } else if (!this.has_opted_in_tracking() && (
         this.get_config('opt_out_tracking_by_default') || _.cookie.get('mp_optout')
     )) {
@@ -1562,7 +1570,7 @@ MixpanelLib.prototype._gdpr_init = function() {
  * @param {boolean} [options.clear_persistence] If true, will delete all data stored by the sdk in persistence and disable it
  * @param {boolean} [options.enable_persistence] If true, will re-enable sdk persistence
  */
-MixpanelLib.prototype._gdpr_update_persistence = function(options) {
+GreenfinchLib.prototype._gdpr_update_persistence = function (options) {
     var disabled;
     if (options && options['clear_persistence']) {
         disabled = true;
@@ -1577,14 +1585,14 @@ MixpanelLib.prototype._gdpr_update_persistence = function(options) {
     }
 
     if (disabled) {
-        _.each(this.request_batchers, function(batcher) {
+        _.each(this.request_batchers, function (batcher) {
             batcher.clear();
         });
     }
 };
 
 // call a base gdpr function after constructing the appropriate token and options args
-MixpanelLib.prototype._gdpr_call_func = function(func, options) {
+GreenfinchLib.prototype._gdpr_call_func = function (func, options) {
     options = _.extend({
         'track': _.bind(this.track, this),
         'persistence_type': this.get_config('opt_out_tracking_persistence_type'),
@@ -1618,15 +1626,15 @@ MixpanelLib.prototype._gdpr_call_func = function(func, options) {
 };
 
 /**
- * Opt the user in to data tracking and cookies/localstorage for this Mixpanel instance
+ * Opt the user in to data tracking and cookies/localstorage for this Greenfinch instance
  *
  * ### Usage
  *
  *     // opt user in
- *     mixpanel.opt_in_tracking();
+ *     greenfinch.opt_in_tracking();
  *
  *     // opt user in with specific event name, properties, cookie configuration
- *     mixpanel.opt_in_tracking({
+ *     greenfinch.opt_in_tracking({
  *         track_event_name: 'User opted in',
  *         track_event_properties: {
  *             'Email': 'jdoe@example.com'
@@ -1636,19 +1644,19 @@ MixpanelLib.prototype._gdpr_call_func = function(func, options) {
  *     });
  *
  * @param {Object} [options] A dictionary of config options to override
- * @param {function} [options.track] Function used for tracking a Mixpanel event to record the opt-in action (default is this Mixpanel instance's track method)
+ * @param {function} [options.track] Function used for tracking a Greenfinch event to record the opt-in action (default is this Greenfinch instance's track method)
  * @param {string} [options.track_event_name=$opt_in] Event name to be used for tracking the opt-in action
  * @param {Object} [options.track_properties] Set of properties to be tracked along with the opt-in action
  * @param {boolean} [options.enable_persistence=true] If true, will re-enable sdk persistence
  * @param {string} [options.persistence_type=localStorage] Persistence mechanism used - cookie or localStorage - falls back to cookie if localStorage is unavailable
  * @param {string} [options.cookie_prefix=__mp_opt_in_out] Custom prefix to be used in the cookie/localstorage name
- * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Mixpanel instance's config)
- * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Mixpanel instance's config)
+ * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Greenfinch instance's config)
+ * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Greenfinch instance's config)
  */
-MixpanelLib.prototype.opt_in_tracking = function(options) {
+GreenfinchLib.prototype.opt_in_tracking = function (options) {
     options = _.extend({
         'enable_persistence': true
     }, options);
@@ -1658,15 +1666,15 @@ MixpanelLib.prototype.opt_in_tracking = function(options) {
 };
 
 /**
- * Opt the user out of data tracking and cookies/localstorage for this Mixpanel instance
+ * Opt the user out of data tracking and cookies/localstorage for this Greenfinch instance
  *
  * ### Usage
  *
  *     // opt user out
- *     mixpanel.opt_out_tracking();
+ *     greenfinch.opt_out_tracking();
  *
- *     // opt user out with different cookie configuration from Mixpanel instance
- *     mixpanel.opt_out_tracking({
+ *     // opt user out with different cookie configuration from Greenfinch instance
+ *     greenfinch.opt_out_tracking({
  *         cookie_expiration: 30,
  *         secure_cookie: true
  *     });
@@ -1676,13 +1684,13 @@ MixpanelLib.prototype.opt_in_tracking = function(options) {
  * @param {boolean} [options.clear_persistence=true] If true, will delete all data stored by the sdk in persistence
  * @param {string} [options.persistence_type=localStorage] Persistence mechanism used - cookie or localStorage - falls back to cookie if localStorage is unavailable
  * @param {string} [options.cookie_prefix=__mp_opt_in_out] Custom prefix to be used in the cookie/localstorage name
- * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Mixpanel instance's config)
- * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Mixpanel instance's config)
+ * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Greenfinch instance's config)
+ * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Greenfinch instance's config)
  */
-MixpanelLib.prototype.opt_out_tracking = function(options) {
+GreenfinchLib.prototype.opt_out_tracking = function (options) {
     options = _.extend({
         'clear_persistence': true,
         'delete_user': true
@@ -1699,11 +1707,11 @@ MixpanelLib.prototype.opt_out_tracking = function(options) {
 };
 
 /**
- * Check whether the user has opted in to data tracking and cookies/localstorage for this Mixpanel instance
+ * Check whether the user has opted in to data tracking and cookies/localstorage for this Greenfinch instance
  *
  * ### Usage
  *
- *     var has_opted_in = mixpanel.has_opted_in_tracking();
+ *     var has_opted_in = greenfinch.has_opted_in_tracking();
  *     // use has_opted_in value
  *
  * @param {Object} [options] A dictionary of config options to override
@@ -1711,16 +1719,16 @@ MixpanelLib.prototype.opt_out_tracking = function(options) {
  * @param {string} [options.cookie_prefix=__mp_opt_in_out] Custom prefix to be used in the cookie/localstorage name
  * @returns {boolean} current opt-in status
  */
-MixpanelLib.prototype.has_opted_in_tracking = function(options) {
+GreenfinchLib.prototype.has_opted_in_tracking = function (options) {
     return this._gdpr_call_func(hasOptedIn, options);
 };
 
 /**
- * Check whether the user has opted out of data tracking and cookies/localstorage for this Mixpanel instance
+ * Check whether the user has opted out of data tracking and cookies/localstorage for this Greenfinch instance
  *
  * ### Usage
  *
- *     var has_opted_out = mixpanel.has_opted_out_tracking();
+ *     var has_opted_out = greenfinch.has_opted_out_tracking();
  *     // use has_opted_out value
  *
  * @param {Object} [options] A dictionary of config options to override
@@ -1728,21 +1736,21 @@ MixpanelLib.prototype.has_opted_in_tracking = function(options) {
  * @param {string} [options.cookie_prefix=__mp_opt_in_out] Custom prefix to be used in the cookie/localstorage name
  * @returns {boolean} current opt-out status
  */
-MixpanelLib.prototype.has_opted_out_tracking = function(options) {
+GreenfinchLib.prototype.has_opted_out_tracking = function (options) {
     return this._gdpr_call_func(hasOptedOut, options);
 };
 
 /**
- * Clear the user's opt in/out status of data tracking and cookies/localstorage for this Mixpanel instance
+ * Clear the user's opt in/out status of data tracking and cookies/localstorage for this Greenfinch instance
  *
  * ### Usage
  *
  *     // clear user's opt-in/out status
- *     mixpanel.clear_opt_in_out_tracking();
+ *     greenfinch.clear_opt_in_out_tracking();
  *
  *     // clear user's opt-in/out status with specific cookie configuration - should match
  *     // configuration used when opt_in_tracking/opt_out_tracking methods were called.
- *     mixpanel.clear_opt_in_out_tracking({
+ *     greenfinch.clear_opt_in_out_tracking({
  *         cookie_expiration: 30,
  *         secure_cookie: true
  *     });
@@ -1751,13 +1759,13 @@ MixpanelLib.prototype.has_opted_out_tracking = function(options) {
  * @param {boolean} [options.enable_persistence=true] If true, will re-enable sdk persistence
  * @param {string} [options.persistence_type=localStorage] Persistence mechanism used - cookie or localStorage - falls back to cookie if localStorage is unavailable
  * @param {string} [options.cookie_prefix=__mp_opt_in_out] Custom prefix to be used in the cookie/localstorage name
- * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Mixpanel instance's config)
- * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Mixpanel instance's config)
- * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Mixpanel instance's config)
+ * @param {Number} [options.cookie_expiration] Number of days until the opt-in cookie expires (overrides value specified in this Greenfinch instance's config)
+ * @param {string} [options.cookie_domain] Custom cookie domain (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_site_cookie] Whether the opt-in cookie is set as cross-site-enabled (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.cross_subdomain_cookie] Whether the opt-in cookie is set as cross-subdomain or not (overrides value specified in this Greenfinch instance's config)
+ * @param {boolean} [options.secure_cookie] Whether the opt-in cookie is set as secure or not (overrides value specified in this Greenfinch instance's config)
  */
-MixpanelLib.prototype.clear_opt_in_out_tracking = function(options) {
+GreenfinchLib.prototype.clear_opt_in_out_tracking = function (options) {
     options = _.extend({
         'enable_persistence': true
     }, options);
@@ -1768,106 +1776,110 @@ MixpanelLib.prototype.clear_opt_in_out_tracking = function(options) {
 
 // EXPORTS (for closure compiler)
 
-// MixpanelLib Exports
-MixpanelLib.prototype['init']                               = MixpanelLib.prototype.init;
-MixpanelLib.prototype['reset']                              = MixpanelLib.prototype.reset;
-MixpanelLib.prototype['disable']                            = MixpanelLib.prototype.disable;
-MixpanelLib.prototype['time_event']                         = MixpanelLib.prototype.time_event;
-MixpanelLib.prototype['track']                              = MixpanelLib.prototype.track;
-MixpanelLib.prototype['track_links']                        = MixpanelLib.prototype.track_links;
-MixpanelLib.prototype['track_forms']                        = MixpanelLib.prototype.track_forms;
-MixpanelLib.prototype['track_pageview']                     = MixpanelLib.prototype.track_pageview;
-MixpanelLib.prototype['register']                           = MixpanelLib.prototype.register;
-MixpanelLib.prototype['register_once']                      = MixpanelLib.prototype.register_once;
-MixpanelLib.prototype['unregister']                         = MixpanelLib.prototype.unregister;
-MixpanelLib.prototype['identify']                           = MixpanelLib.prototype.identify;
-MixpanelLib.prototype['alias']                              = MixpanelLib.prototype.alias;
-MixpanelLib.prototype['name_tag']                           = MixpanelLib.prototype.name_tag;
-MixpanelLib.prototype['set_config']                         = MixpanelLib.prototype.set_config;
-MixpanelLib.prototype['get_config']                         = MixpanelLib.prototype.get_config;
-MixpanelLib.prototype['get_property']                       = MixpanelLib.prototype.get_property;
-MixpanelLib.prototype['get_distinct_id']                    = MixpanelLib.prototype.get_distinct_id;
-MixpanelLib.prototype['toString']                           = MixpanelLib.prototype.toString;
-MixpanelLib.prototype['_check_and_handle_notifications']    = MixpanelLib.prototype._check_and_handle_notifications;
-MixpanelLib.prototype['_handle_user_decide_check_complete'] = MixpanelLib.prototype._handle_user_decide_check_complete;
-MixpanelLib.prototype['_show_notification']                 = MixpanelLib.prototype._show_notification;
-MixpanelLib.prototype['opt_out_tracking']                   = MixpanelLib.prototype.opt_out_tracking;
-MixpanelLib.prototype['opt_in_tracking']                    = MixpanelLib.prototype.opt_in_tracking;
-MixpanelLib.prototype['has_opted_out_tracking']             = MixpanelLib.prototype.has_opted_out_tracking;
-MixpanelLib.prototype['has_opted_in_tracking']              = MixpanelLib.prototype.has_opted_in_tracking;
-MixpanelLib.prototype['clear_opt_in_out_tracking']          = MixpanelLib.prototype.clear_opt_in_out_tracking;
-MixpanelLib.prototype['get_group']                          = MixpanelLib.prototype.get_group;
-MixpanelLib.prototype['set_group']                          = MixpanelLib.prototype.set_group;
-MixpanelLib.prototype['add_group']                          = MixpanelLib.prototype.add_group;
-MixpanelLib.prototype['remove_group']                       = MixpanelLib.prototype.remove_group;
-MixpanelLib.prototype['track_with_groups']                  = MixpanelLib.prototype.track_with_groups;
-MixpanelLib.prototype['stop_batch_requests']                = MixpanelLib.prototype.stop_batch_requests;
+// GreenfinchLib Exports
+GreenfinchLib.prototype['init'] = GreenfinchLib.prototype.init;
+GreenfinchLib.prototype['reset'] = GreenfinchLib.prototype.reset;
+GreenfinchLib.prototype['disable'] = GreenfinchLib.prototype.disable;
+GreenfinchLib.prototype['time_event'] = GreenfinchLib.prototype.time_event;
+GreenfinchLib.prototype['track'] = GreenfinchLib.prototype.track;
+GreenfinchLib.prototype['track_links'] = GreenfinchLib.prototype.track_links;
+GreenfinchLib.prototype['track_forms'] = GreenfinchLib.prototype.track_forms;
+GreenfinchLib.prototype['page'] = GreenfinchLib.prototype.page;
+GreenfinchLib.prototype['register'] = GreenfinchLib.prototype.register;
+GreenfinchLib.prototype['register_once'] = GreenfinchLib.prototype.register_once;
+GreenfinchLib.prototype['unregister'] = GreenfinchLib.prototype.unregister;
+GreenfinchLib.prototype['identify'] = GreenfinchLib.prototype.identify;
+GreenfinchLib.prototype['alias'] = GreenfinchLib.prototype.alias;
+GreenfinchLib.prototype['name_tag'] = GreenfinchLib.prototype.name_tag;
+GreenfinchLib.prototype['set_config'] = GreenfinchLib.prototype.set_config;
+GreenfinchLib.prototype['get_config'] = GreenfinchLib.prototype.get_config;
+GreenfinchLib.prototype['get_property'] = GreenfinchLib.prototype.get_property;
+GreenfinchLib.prototype['get_distinct_id'] = GreenfinchLib.prototype.get_distinct_id;
+GreenfinchLib.prototype['toString'] = GreenfinchLib.prototype.toString;
+GreenfinchLib.prototype['_check_and_handle_notifications'] = GreenfinchLib.prototype._check_and_handle_notifications;
+GreenfinchLib.prototype['_handle_user_decide_check_complete'] = GreenfinchLib.prototype._handle_user_decide_check_complete;
+GreenfinchLib.prototype['_show_notification'] = GreenfinchLib.prototype._show_notification;
+GreenfinchLib.prototype['opt_out_tracking'] = GreenfinchLib.prototype.opt_out_tracking;
+GreenfinchLib.prototype['opt_in_tracking'] = GreenfinchLib.prototype.opt_in_tracking;
+GreenfinchLib.prototype['has_opted_out_tracking'] = GreenfinchLib.prototype.has_opted_out_tracking;
+GreenfinchLib.prototype['has_opted_in_tracking'] = GreenfinchLib.prototype.has_opted_in_tracking;
+GreenfinchLib.prototype['clear_opt_in_out_tracking'] = GreenfinchLib.prototype.clear_opt_in_out_tracking;
+GreenfinchLib.prototype['get_group'] = GreenfinchLib.prototype.get_group;
+GreenfinchLib.prototype['set_group'] = GreenfinchLib.prototype.set_group;
+GreenfinchLib.prototype['add_group'] = GreenfinchLib.prototype.add_group;
+GreenfinchLib.prototype['remove_group'] = GreenfinchLib.prototype.remove_group;
+GreenfinchLib.prototype['track_with_groups'] = GreenfinchLib.prototype.track_with_groups;
+GreenfinchLib.prototype['stop_batch_requests'] = GreenfinchLib.prototype.stop_batch_requests;
 
-// MixpanelPersistence Exports
-MixpanelPersistence.prototype['properties']            = MixpanelPersistence.prototype.properties;
-MixpanelPersistence.prototype['update_search_keyword'] = MixpanelPersistence.prototype.update_search_keyword;
-MixpanelPersistence.prototype['update_referrer_info']  = MixpanelPersistence.prototype.update_referrer_info;
-MixpanelPersistence.prototype['get_cross_subdomain']   = MixpanelPersistence.prototype.get_cross_subdomain;
-MixpanelPersistence.prototype['clear']                 = MixpanelPersistence.prototype.clear;
+// GreenfinchPersistence Exports
+GreenfinchPersistence.prototype['properties'] = GreenfinchPersistence.prototype.properties;
+GreenfinchPersistence.prototype['update_search_keyword'] = GreenfinchPersistence.prototype.update_search_keyword;
+GreenfinchPersistence.prototype['update_referrer_info'] = GreenfinchPersistence.prototype.update_referrer_info;
+GreenfinchPersistence.prototype['get_cross_subdomain'] = GreenfinchPersistence.prototype.get_cross_subdomain;
+GreenfinchPersistence.prototype['clear'] = GreenfinchPersistence.prototype.clear;
 
-_.safewrap_class(MixpanelLib, ['identify', '_check_and_handle_notifications', '_show_notification']);
+_.safewrap_class(GreenfinchLib, ['identify', '_check_and_handle_notifications', '_show_notification']);
 
 
 var instances = {};
-var extend_mp = function() {
-    // add all the sub mixpanel instances
-    _.each(instances, function(instance, name) {
-        if (name !== PRIMARY_INSTANCE_NAME) { mixpanel_master[name] = instance; }
+var extend_mp = function () {
+    // add all the sub greenfinch instances
+    _.each(instances, function (instance, name) {
+        if (name !== PRIMARY_INSTANCE_NAME) {
+            greenfinch_master[name] = instance;
+        }
     });
 
     // add private functions as _
-    mixpanel_master['_'] = _;
+    greenfinch_master['_'] = _;
 };
 
-var override_mp_init_func = function() {
+var override_mp_init_func = function () {
     // we override the snippets init function to handle the case where a
-    // user initializes the mixpanel library after the script loads & runs
-    mixpanel_master['init'] = function(token, config, name) {
+    // user initializes the greenfinch library after the script loads & runs
+    greenfinch_master['init'] = function (token, config, name) {
         if (name) {
             // initialize a sub library
-            if (!mixpanel_master[name]) {
-                mixpanel_master[name] = instances[name] = create_mplib(token, config, name);
-                mixpanel_master[name]._loaded();
+            if (!greenfinch_master[name]) {
+                greenfinch_master[name] = instances[name] = create_mplib(token, config, name);
+                greenfinch_master[name]._loaded();
             }
-            return mixpanel_master[name];
+            return greenfinch_master[name];
         } else {
-            var instance = mixpanel_master;
+            var instance = greenfinch_master;
 
             if (instances[PRIMARY_INSTANCE_NAME]) {
-                // main mixpanel lib already initialized
+                // main greenfinch lib already initialized
                 instance = instances[PRIMARY_INSTANCE_NAME];
             } else if (token) {
-                // intialize the main mixpanel lib
+                // intialize the main greenfinch lib
                 instance = create_mplib(token, config, PRIMARY_INSTANCE_NAME);
                 instance._loaded();
                 instances[PRIMARY_INSTANCE_NAME] = instance;
             }
 
-            mixpanel_master = instance;
+            greenfinch_master = instance;
             if (init_type === INIT_SNIPPET) {
-                window[PRIMARY_INSTANCE_NAME] = mixpanel_master;
+                window[PRIMARY_INSTANCE_NAME] = greenfinch_master;
             }
             extend_mp();
         }
     };
 };
 
-var add_dom_loaded_handler = function() {
+var add_dom_loaded_handler = function () {
     // Cross browser DOM Loaded support
     function dom_loaded_handler() {
         // function flag since we only want to execute this once
-        if (dom_loaded_handler.done) { return; }
+        if (dom_loaded_handler.done) {
+            return;
+        }
         dom_loaded_handler.done = true;
 
         DOM_LOADED = true;
         ENQUEUE_REQUESTS = false;
 
-        _.each(instances, function(inst) {
+        _.each(instances, function (inst) {
             inst._dom_loaded();
         });
     }
@@ -1875,7 +1887,7 @@ var add_dom_loaded_handler = function() {
     function do_scroll_check() {
         try {
             document.documentElement.doScroll('left');
-        } catch(e) {
+        } catch (e) {
             setTimeout(do_scroll_check, 1);
             return;
         }
@@ -1901,7 +1913,7 @@ var add_dom_loaded_handler = function() {
         var toplevel = false;
         try {
             toplevel = window.frameElement === null;
-        } catch(e) {
+        } catch (e) {
             // noop
         }
 
@@ -1916,38 +1928,38 @@ var add_dom_loaded_handler = function() {
 
 export function init_from_snippet() {
     init_type = INIT_SNIPPET;
-    mixpanel_master = window[PRIMARY_INSTANCE_NAME];
+    greenfinch_master = window[PRIMARY_INSTANCE_NAME];
 
     // Initialization
-    if (_.isUndefined(mixpanel_master)) {
-        // mixpanel wasn't initialized properly, report error and quit
-        console.critical('"mixpanel" object not initialized. Ensure you are using the latest version of the Mixpanel JS Library along with the snippet we provide.');
+    if (_.isUndefined(greenfinch_master)) {
+        // greenfinch wasn't initialized properly, report error and quit
+        console.critical('"greenfinch" object not initialized. Ensure you are using the latest version of the Greenfinch JS Library along with the snippet we provide.');
         return;
     }
-    if (mixpanel_master['__loaded'] || (mixpanel_master['config'] && mixpanel_master['persistence'])) {
+    if (greenfinch_master['__loaded'] || (greenfinch_master['config'] && greenfinch_master['persistence'])) {
         // lib has already been loaded at least once; we don't want to override the global object this time so bomb early
-        console.error('Mixpanel library has already been downloaded at least once.');
+        console.error('Greenfinch library has already been downloaded at least once.');
         return;
     }
-    var snippet_version = mixpanel_master['__SV'] || 0;
+    var snippet_version = greenfinch_master['__SV'] || 0;
     if (snippet_version < 1.1) {
-        // mixpanel wasn't initialized properly, report error and quit
-        console.critical('Version mismatch; please ensure you\'re using the latest version of the Mixpanel code snippet.');
+        // greenfinch wasn't initialized properly, report error and quit
+        console.critical('Version mismatch; please ensure you\'re using the latest version of the Greenfinch code snippet.');
         return;
     }
 
-    // Load instances of the Mixpanel Library
-    _.each(mixpanel_master['_i'], function(item) {
+    // Load instances of the Greenfinch Library
+    _.each(greenfinch_master['_i'], function (item) {
         if (item && _.isArray(item)) {
-            instances[item[item.length-1]] = create_mplib.apply(this, item);
+            instances[item[item.length - 1]] = create_mplib.apply(this, item);
         }
     });
 
     override_mp_init_func();
-    mixpanel_master['init']();
+    greenfinch_master['init']();
 
-    // Fire loaded events after updating the window's mixpanel object
-    _.each(instances, function(instance) {
+    // Fire loaded events after updating the window's greenfinch object
+    _.each(instances, function (instance) {
         instance._loaded();
     });
 
@@ -1956,11 +1968,11 @@ export function init_from_snippet() {
 
 export function init_as_module() {
     init_type = INIT_MODULE;
-    mixpanel_master = new MixpanelLib();
+    greenfinch_master = new GreenfinchLib();
 
     override_mp_init_func();
-    mixpanel_master['init']();
+    greenfinch_master['init']();
     add_dom_loaded_handler();
 
-    return mixpanel_master;
+    return greenfinch_master;
 }

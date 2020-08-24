@@ -1,4 +1,4 @@
-import { _ } from './utils';
+import {_, document} from './utils';
 import {
     getClassName,
     getSafeText,
@@ -13,7 +13,7 @@ import {
 var autotrack = {
     _initializedTokens: [],
 
-    _previousElementSibling: function(el) {
+    _previousElementSibling: function (el) {
         if (el.previousElementSibling) {
             return el.previousElementSibling;
         } else {
@@ -24,7 +24,7 @@ var autotrack = {
         }
     },
 
-    _loadScript: function(scriptUrlToLoad, callback) {
+    _loadScript: function (scriptUrlToLoad, callback) {
         var scriptTag = document.createElement('script');
         scriptTag.type = 'text/javascript';
         scriptTag.src = scriptUrlToLoad;
@@ -38,14 +38,14 @@ var autotrack = {
         }
     },
 
-    _getPropertiesFromElement: function(elem) {
+    _getPropertiesFromElement: function (elem) {
         var props = {
             'classes': getClassName(elem).split(' '),
             'tag_name': elem.tagName.toLowerCase()
         };
 
         if (shouldTrackElement(elem)) {
-            _.each(elem.attributes, function(attr) {
+            _.each(elem.attributes, function (attr) {
                 if (shouldTrackValue(attr.value)) {
                     props['attr__' + attr.name] = attr.value;
                 }
@@ -67,18 +67,18 @@ var autotrack = {
         return props;
     },
 
-    _getDefaultProperties: function(eventType) {
+    _getDefaultProperties: function (eventType) {
         return {
             '$event_type': eventType,
-            '$ce_version': 1,
             '$host': window.location.host,
-            '$pathname': window.location.pathname
+            '$pathname': window.location.pathname,
+            '$href' : document.location.href
         };
     },
 
-    _extractCustomPropertyValue: function(customProperty) {
+    _extractCustomPropertyValue: function (customProperty) {
         var propValues = [];
-        _.each(document.querySelectorAll(customProperty['css_selector']), function(matchedElem) {
+        _.each(document.querySelectorAll(customProperty['css_selector']), function (matchedElem) {
             var value;
 
             if (['input', 'select'].indexOf(matchedElem.tagName.toLowerCase()) > -1) {
@@ -94,12 +94,12 @@ var autotrack = {
         return propValues.join(', ');
     },
 
-    _getCustomProperties: function(targetElementList) {
+    _getCustomProperties: function (targetElementList) {
         var props = {};
-        _.each(this._customProperties, function(customProperty) {
-            _.each(customProperty['event_selectors'], function(eventSelector) {
+        _.each(this._customProperties, function (customProperty) {
+            _.each(customProperty['event_selectors'], function (eventSelector) {
                 var eventElements = document.querySelectorAll(eventSelector);
-                _.each(eventElements, function(eventElement) {
+                _.each(eventElements, function (eventElement) {
                     if (_.includes(targetElementList, eventElement) && shouldTrackElement(eventElement)) {
                         props[customProperty['name']] = this._extractCustomPropertyValue(customProperty);
                     }
@@ -109,7 +109,7 @@ var autotrack = {
         return props;
     },
 
-    _getEventTarget: function(e) {
+    _getEventTarget: function (e) {
         // https://developer.mozilla.org/en-US/docs/Web/API/Event/target#Compatibility_notes
         if (typeof e.target === 'undefined') {
             return e.srcElement;
@@ -118,7 +118,7 @@ var autotrack = {
         }
     },
 
-    _trackEvent: function(e, instance) {
+    _trackEvent: function (e, instance) {
         /*** Don't mess with this code without running IE8 tests on it ***/
         var target = this._getEventTarget(e);
         if (isTextNode(target)) { // defeat Safari bug (see: http://www.quirksmode.org/js/events_properties.html)
@@ -135,7 +135,7 @@ var autotrack = {
 
             var elementsJson = [];
             var href, explicitNoTrack = false;
-            _.each(targetElementList, function(el) {
+            _.each(targetElementList, function (el) {
                 var shouldTrackEl = shouldTrackElement(el);
 
                 // if the element or a parent element is an anchor tag
@@ -170,7 +170,7 @@ var autotrack = {
             var props = _.extend(
                 this._getDefaultProperties(e.type),
                 {
-                    '$elements':  elementsJson,
+                    '$elements': elementsJson,
                     '$el_attr__href': href,
                     '$el_text': elementText
                 },
@@ -184,12 +184,12 @@ var autotrack = {
 
     // only reason is to stub for unit tests
     // since you can't override window.location props
-    _navigate: function(href) {
+    _navigate: function (href) {
         window.location.href = href;
     },
 
-    _addDomEventHandlers: function(instance) {
-        var handler = _.bind(function(e) {
+    _addDomEventHandlers: function (instance) {
+        var handler = _.bind(function (e) {
             e = e || window.event;
             this._trackEvent(e, instance);
         }, this);
@@ -199,11 +199,13 @@ var autotrack = {
     },
 
     _customProperties: {},
-    init: function(instance) {
+    init: function (instance) {
         if (!(document && document.body)) {
             console.log('document not ready yet, trying again in 500 milliseconds...');
             var that = this;
-            setTimeout(function() { that.init(instance); }, 500);
+            setTimeout(function () {
+                that.init(instance);
+            }, 500);
             return;
         }
 
@@ -213,11 +215,11 @@ var autotrack = {
             return;
         }
         this._initializedTokens.push(token);
-
+        instance.identify();
         if (!this._maybeLoadEditor(instance)) { // don't autotrack actions when the editor is enabled
-            var parseDecideResponse = _.bind(function(response) {
-                if (response && response['config'] && response['config']['enable_collect_everything'] === true) {
-
+            var parseDecideResponse = _.bind(function (response) {
+                if (true) {
+                    //if (response && response['config'] && response['config']['enable_collect_everything'] === true) {
                     if (response['custom_properties']) {
                         this._customProperties = response['custom_properties'];
                     }
@@ -233,20 +235,20 @@ var autotrack = {
                 }
             }, this);
 
-            instance._send_request(
-                instance.get_config('api_host') + '/decide/', {
-                    'verbose': true,
-                    'version': '1',
-                    'lib': 'web',
-                    'token': token
-                },
-                {method: 'GET', transport: 'XHR'},
-                instance._prepare_callback(parseDecideResponse)
-            );
+            // instance._send_request(
+            //     instance.get_config('api_host'), {
+            //         'verbose': true,
+            //         'version': '1',
+            //         'lib': 'web',
+            //         'token': token
+            //     },
+            //     {method: 'POST', transport: 'XHR'},
+            //     instance._prepare_callback(parseDecideResponse)
+            // );
+            parseDecideResponse({});
         }
     },
-
-    _editorParamsFromHash: function(instance, hash) {
+    _editorParamsFromHash: function (instance, hash) {
         var editorParams;
         try {
             var state = _.getHashParam(hash, 'state');
@@ -284,7 +286,7 @@ var autotrack = {
      * 2. From session storage under the key `_mpcehash` if the snippet already parsed the hash
      * 3. From session storage under the key `editorParams` if the editor was initialized on a previous page
      */
-    _maybeLoadEditor: function(instance) {
+    _maybeLoadEditor: function (instance) {
         try {
             var parseFromUrl = false;
             if (_.getHashParam(window.location.hash, 'state')) {
@@ -315,13 +317,13 @@ var autotrack = {
         }
     },
 
-    _loadEditor: function(instance, editorParams) {
-        if (!window['_mpEditorLoaded']) { // only load the codeless event editor once, even if there are multiple instances of MixpanelLib
+    _loadEditor: function (instance, editorParams) {
+        if (!window['_mpEditorLoaded']) { // only load the codeless event editor once, even if there are multiple instances of GreenfinchLib
             window['_mpEditorLoaded'] = true;
             var editorUrl = instance.get_config('app_host')
-              + '/js-bundle/reports/collect-everything/editor.js?_ts='
-              + (new Date()).getTime();
-            this._loadScript(editorUrl, function() {
+                + '/js-bundle/reports/collect-everything/editor.js?_ts='
+                + (new Date()).getTime();
+            this._loadScript(editorUrl, function () {
                 window['mp_load_editor'](editorParams);
             });
             return true;
@@ -334,7 +336,7 @@ var autotrack = {
     // need to gently ramp this up so we don't overload decide. this decides
     // deterministically if CE is enabled for this project by modding the char
     // value of the project token.
-    enabledForProject: function(token, numBuckets, numEnabledBuckets) {
+    enabledForProject: function (token, numBuckets, numEnabledBuckets) {
         numBuckets = !_.isUndefined(numBuckets) ? numBuckets : 10;
         numEnabledBuckets = !_.isUndefined(numEnabledBuckets) ? numEnabledBuckets : 10;
         var charCodeSum = 0;
@@ -344,7 +346,7 @@ var autotrack = {
         return (charCodeSum % numBuckets) < numEnabledBuckets;
     },
 
-    isBrowserSupported: function() {
+    isBrowserSupported: function () {
         return _.isFunction(document.querySelectorAll);
     }
 };
@@ -352,4 +354,4 @@ var autotrack = {
 _.bind_instance_methods(autotrack);
 _.safewrap_instance_methods(autotrack);
 
-export { autotrack };
+export {autotrack};

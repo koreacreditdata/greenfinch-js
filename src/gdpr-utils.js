@@ -7,14 +7,14 @@
  * over their personal data and to simplify the regulatory environment for international business
  * by unifying the regulation within the EU.
  *
- * This set of utilities is intended to enable opt in/out functionality in the Mixpanel JS SDK.
+ * This set of utilities is intended to enable opt in/out functionality in the Greenfinch JS SDK.
  * These functions are used internally by the SDK and are not intended to be publicly exposed.
  */
 
 import { _, window } from './utils';
 
 /**
- * A function used to track a Mixpanel event (e.g. MixpanelLib.track)
+ * A function used to track a Greenfinch event (e.g. GreenfinchLib.track)
  * @callback trackFunction
  * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
  * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
@@ -27,9 +27,9 @@ var GDPR_DEFAULT_PERSISTENCE_PREFIX = '__mp_opt_in_out_';
 
 /**
  * Opt the user in to data tracking and cookies/localstorage for the given token
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
- * @param {trackFunction} [options.track] - function used for tracking a Mixpanel event to record the opt-in action
+ * @param {trackFunction} [options.track] - function used for tracking a Greenfinch event to record the opt-in action
  * @param {string} [options.trackEventName] - event name to be used for tracking the opt-in action
  * @param {Object} [options.trackProperties] - set of properties to be tracked along with the opt-in action
  * @param {string} [options.persistenceType] Persistence mechanism used - cookie or localStorage
@@ -46,7 +46,7 @@ export function optIn(token, options) {
 
 /**
  * Opt the user out of data tracking and cookies/localstorage for the given token
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistenceType] Persistence mechanism used - cookie or localStorage
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
@@ -62,7 +62,7 @@ export function optOut(token, options) {
 
 /**
  * Check whether the user has opted in to data tracking and cookies/localstorage for the given token
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistenceType] Persistence mechanism used - cookie or localStorage
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
@@ -74,7 +74,7 @@ export function hasOptedIn(token, options) {
 
 /**
  * Check whether the user has opted out of data tracking and cookies/localstorage for the given token
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistenceType] Persistence mechanism used - cookie or localStorage
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
@@ -89,39 +89,39 @@ export function hasOptedOut(token, options) {
 }
 
 /**
- * Wrap a MixpanelLib method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
+ * Wrap a GreenfinchLib method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
  * If the user has opted out, return early instead of executing the method.
  * If a callback argument was provided, execute it passing the 0 error code.
  * @param {function} method - wrapped method to be executed if the user has not opted out
  * @returns {*} the result of executing method OR undefined if the user has opted out
  */
-export function addOptOutCheckMixpanelLib(method) {
+export function addOptOutCheckGreenfinchLib(method) {
     return _addOptOutCheck(method, function(name) {
         return this.get_config(name);
     });
 }
 
 /**
- * Wrap a MixpanelPeople method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
+ * Wrap a GreenfinchPeople method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
  * If the user has opted out, return early instead of executing the method.
  * If a callback argument was provided, execute it passing the 0 error code.
  * @param {function} method - wrapped method to be executed if the user has not opted out
  * @returns {*} the result of executing method OR undefined if the user has opted out
  */
-export function addOptOutCheckMixpanelPeople(method) {
+export function addOptOutCheckGreenfinchPeople(method) {
     return _addOptOutCheck(method, function(name) {
         return this._get_config(name);
     });
 }
 
 /**
- * Wrap a MixpanelGroup method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
+ * Wrap a GreenfinchGroup method with a check for whether the user is opted out of data tracking and cookies/localstorage for the given token
  * If the user has opted out, return early instead of executing the method.
  * If a callback argument was provided, execute it passing the 0 error code.
  * @param {function} method - wrapped method to be executed if the user has not opted out
  * @returns {*} the result of executing method OR undefined if the user has opted out
  */
-export function addOptOutCheckMixpanelGroup(method) {
+export function addOptOutCheckGreenfinchGroup(method) {
     return _addOptOutCheck(method, function(name) {
         return this._get_config(name);
     });
@@ -129,7 +129,7 @@ export function addOptOutCheckMixpanelGroup(method) {
 
 /**
  * Clear the user's opt in/out status of data tracking and cookies/localstorage for the given token
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistenceType] Persistence mechanism used - cookie or localStorage
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
@@ -161,7 +161,7 @@ function _getStorage(options) {
 
 /**
  * Get the name of the cookie that is used for the given opt type (tracking, cookie, etc.)
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
  * @returns {string} the name of the cookie for the given opt type
@@ -173,7 +173,7 @@ function _getStorageKey(token, options) {
 
 /**
  * Get the value of the cookie that is used for the given opt type (tracking, cookie, etc.)
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
  * @returns {string} the value of the cookie for the given opt type
@@ -213,9 +213,9 @@ function _hasDoNotTrackFlagOn(options) {
 /**
  * Set cookie/localstorage for the user indicating that they are opted in or out for the given opt type
  * @param {boolean} optValue - whether to opt the user in or out for the given opt type
- * @param {string} token - Mixpanel project tracking token
+ * @param {string} token - Greenfinch project tracking token
  * @param {Object} [options]
- * @param {trackFunction} [options.track] - function used for tracking a Mixpanel event to record the opt-in action
+ * @param {trackFunction} [options.track] - function used for tracking a Greenfinch event to record the opt-in action
  * @param {string} [options.trackEventName] - event name to be used for tracking the opt-in action
  * @param {Object} [options.trackProperties] - set of properties to be tracked along with the opt-in action
  * @param {string} [options.persistencePrefix=__mp_opt_in_out] - custom prefix to be used in the cookie/localstorage name
@@ -255,7 +255,7 @@ function _optInOut(optValue, token, options) {
  * If the user has opted out, return early instead of executing the method.
  * If a callback argument was provided, execute it passing the 0 error code.
  * @param {function} method - wrapped method to be executed if the user has not opted out
- * @param {function} getConfigValue - getter function for the Mixpanel API token and other options to be used with opt-out check
+ * @param {function} getConfigValue - getter function for the Greenfinch API token and other options to be used with opt-out check
  * @returns {*} the result of executing method OR undefined if the user has opted out
  */
 function _addOptOutCheck(method, getConfigValue) {

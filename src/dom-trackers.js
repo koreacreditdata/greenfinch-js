@@ -14,8 +14,8 @@ DomTracker.prototype.create_properties = function() {};
 DomTracker.prototype.event_handler = function() {};
 DomTracker.prototype.after_track_handler = function() {};
 
-DomTracker.prototype.init = function(mixpanel_instance) {
-    this.mp = mixpanel_instance;
+DomTracker.prototype.init = function(greenfinch_instance) {
+    this.mp = greenfinch_instance;
     return this;
 };
 
@@ -42,7 +42,7 @@ DomTracker.prototype.track = function(query, event_name, properties, user_callba
 
             that.event_handler(e, this, options);
 
-            // in case the mixpanel servers don't get back to us in time
+            // in case the greenfinch servers don't get back to us in time
             window.setTimeout(that.track_callback(user_callback, props, options, true), timeout);
 
             // fire the tracking event

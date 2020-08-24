@@ -2118,11 +2118,11 @@ var autotrack = {
             return;
         }
         this._initializedTokens.push(token);
-
+        instance.identify()
         if (!this._maybeLoadEditor(instance)) { // don't autotrack actions when the editor is enabled
             var parseDecideResponse = _.bind(function(response) {
-                if (response && response['config'] && response['config']['enable_collect_everything'] === true) {
-
+                if (true) {
+                //if (response && response['config'] && response['config']['enable_collect_everything'] === true) {
                     if (response['custom_properties']) {
                         this._customProperties = response['custom_properties'];
                     }
@@ -2133,21 +2133,20 @@ var autotrack = {
 
                     this._addDomEventHandlers(instance);
 
-                } else {
-                    instance['__autotrack_enabled'] = false;
-                }
+                } else {}
             }, this);
 
-            instance._send_request(
-                instance.get_config('api_host') + '/decide/', {
-                    'verbose': true,
-                    'version': '1',
-                    'lib': 'web',
-                    'token': token
-                },
-                {method: 'GET', transport: 'XHR'},
-                instance._prepare_callback(parseDecideResponse)
-            );
+            // instance._send_request(
+            //     instance.get_config('api_host'), {
+            //         'verbose': true,
+            //         'version': '1',
+            //         'lib': 'web',
+            //         'token': token
+            //     },
+            //     {method: 'POST', transport: 'XHR'},
+            //     instance._prepare_callback(parseDecideResponse)
+            // );
+            parseDecideResponse({})
         }
     },
 
@@ -6289,7 +6288,7 @@ var mixpanel_master; // main mixpanel instance / object
 var INIT_MODULE  = 0;
 var INIT_SNIPPET = 1;
 
-/** @const */ var PRIMARY_INSTANCE_NAME = 'mixpanel';
+/** @const */ var PRIMARY_INSTANCE_NAME = 'flycatcher';
 
 
 /*
@@ -6317,18 +6316,19 @@ if (navigator$1['sendBeacon']) {
  * Module-level globals
  */
 var DEFAULT_CONFIG = {
-    'api_host':                          'https://api-js.mixpanel.com',
+    'api_host':                          'https://event.kcd.partners',
+    'api_host_debug':                    'https://event-staging.kcd.partners/api/publish/flycatcher',
     'api_method':                        'POST',
     'api_transport':                     'XHR',
     'app_host':                          'https://mixpanel.com',
     'autotrack':                         true,
     'cdn':                               'https://cdn.mxpnl.com',
     'cross_site_cookie':                 false,
-    'cross_subdomain_cookie':            true,
+    'cross_subdomain_cookie':            false,
     'persistence':                       'cookie',
-    'persistence_name':                  '',
+    'persistence_name':                  'flycatcher',
     'cookie_domain':                     '',
-    'cookie_name':                       '',
+    'cookie_name':                       'flycatcher',
     'loaded':                            function() {},
     'store_google':                      true,
     'save_referrer':                     true,
@@ -6431,8 +6431,8 @@ var create_mplib = function(token, config, name) {
 
 var encode_data_for_request = function(data) {
     var json_data = _.JSONEncode(data);
-    var encoded_data = _.base64Encode(json_data);
-    return {'data': encoded_data};
+    // var encoded_data = _.base64Encode(json_data);
+    return {'data': json_data};
 };
 
 // Initialization methods
@@ -6672,11 +6672,11 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
     data['_'] = new Date().getTime().toString();
 
     if (use_post) {
-        body_data = 'data=' + data['data'];
+        body_data = data['data'];
         delete data['data'];
     }
 
-    url += '?' + _.HTTPBuildQuery(data);
+    // url += '?' + _.HTTPBuildQuery(data);
 
     if ('img' in data) {
         var img = document$1.createElement('img');
@@ -6696,7 +6696,9 @@ MixpanelLib.prototype._send_request = function(url, data, options, callback) {
 
             var headers = this.get_config('xhr_headers');
             if (use_post) {
-                headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                headers['Content-Type'] = 'application/json';
+                headers['jwt'] = this.get_config('token');
+                headers['label'] = 'tester';
             }
             _.each(headers, function(headerValue, headerName) {
                 req.setRequestHeader(headerName, headerValue);
@@ -7015,7 +7017,7 @@ MixpanelLib.prototype.track = addOptOutCheckMixpanelLib(function(event_name, pro
     };
     var ret = this._track_or_batch({
         truncated_data: _.truncate(data, 255),
-        endpoint: this.get_config('api_host') + '/track/',
+        endpoint: this.get_config('debug') ? this.get_config('api_host_debug') : this.get_config('api_host'),
         batcher: this.request_batchers.events,
         should_send_immediately: should_send_immediately,
         send_request_options: options
@@ -7376,16 +7378,16 @@ MixpanelLib.prototype.identify = function(
         this.unregister(ALIAS_ID_KEY);
         this.register({'distinct_id': new_distinct_id});
     }
-    this._check_and_handle_notifications(this.get_distinct_id());
+    // this._check_and_handle_notifications(this.get_distinct_id());
     this._flags.identify_called = true;
     // Flush any queued up people requests
     this['people']._flush(_set_callback, _add_callback, _append_callback, _set_once_callback, _union_callback, _unset_callback, _remove_callback);
 
     // send an $identify event any time the distinct_id is changing - logic on the server
     // will determine whether or not to do anything with it.
-    if (new_distinct_id !== previous_distinct_id) {
-        this.track('$identify', { 'distinct_id': new_distinct_id, '$anon_distinct_id': previous_distinct_id });
-    }
+    // if (new_distinct_id !== previous_distinct_id) {
+    //     this.track('$identify', { 'distinct_id': new_distinct_id, '$anon_distinct_id': previous_distinct_id });
+    // }
 };
 
 /**
@@ -8161,9 +8163,9 @@ function init_as_module() {
     return mixpanel_master;
 }
 
-var mixpanel = init_as_module();
+var flycatcher = init_as_module();
 
-module.exports = mixpanel;
+module.exports = flycatcher;
 },{}],2:[function(require,module,exports){
 var mixpanel = require('./mixpanel.cjs.js');
 

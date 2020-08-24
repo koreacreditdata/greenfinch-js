@@ -1,76 +1,124 @@
-# Mixpanel JavaScript Library
-[![Build Status](https://travis-ci.org/mixpanel/mixpanel-js.svg?branch=master)](https://travis-ci.org/mixpanel/mixpanel-js)
+# GreenFinch JavaScript Library
+![](https://upload.wikimedia.org/wikipedia/commons/3/32/Carduelis_chloris_3_%28Marek_Szczepanek%29.jpg)
 
-The Mixpanel JavaScript Library is a set of methods attached to a global `mixpanel` object
-intended to be used by websites wishing to send data to Mixpanel projects. A full reference
-is available [here](https://developer.mixpanel.com/docs/javascript-full-api-reference).
+한국신용데이터 data lake로 서비스 내 각종 event를 전송하는 javascript library 입니다. 
 
-## Alternative installation via NPM
-This library is available as a [package on NPM](https://www.npmjs.com/package/mixpanel-browser) (named `mixpanel-browser` to distinguish it from Mixpanel's server-side Node.js library, available on NPM as `mixpanel`). To install into a project using NPM with a front-end packager such as [Browserify](http://browserify.org/) or [Webpack](https://webpack.github.io/):
-
+## 설치하기
+아래 2가지 방법을 지원합니다. 서비스 환경에 맞는 방법으로 설치하시기 바랍니다.
+### NPM으로 설치하기
 ```sh
-npm install --save mixpanel-browser
+npm install --save greenfinch
 ```
 
-You can then require the lib like a standard Node.js module:
+라이브러리 설치 후 발급받은 토큰와 서비스명으로 init후 track 호출로 이벤트 전송
 
 ```javascript
-var mixpanel = require('mixpanel-browser');
+import greenfinch from 'greenfinch';
 
-mixpanel.init("YOUR_TOKEN");
-mixpanel.track("An event");
+greenfinch.init('<YOUR TOKEN>', {'service_name': '<YOUR SERVICE>', 'debug':true});
+greenfinch.track("An event");
 ```
 
-## Alternative installation via Bower
-`mixpanel-js` is also available via front-end package manager [Bower](http://bower.io/). After installing Bower, fetch into your project's `bower_components` dir with:
-```sh
-bower install mixpanel
-```
-
-### Using Bower to load the snippet
-You can then load the lib via the embed code (snippet) with a script reference:
+### Javascript snippet으로 설치하기
+아래 snippet을 발급받은 토큰와 서비스명으로 치환 후 `<head></head>` 사이에 붙어넣기
 ```html
-<script src="bower_components/mixpanel/mixpanel-jslib-snippet.min.js"></script>
-```
-which loads the _latest_ library version from the Mixpanel CDN ([http://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js](http://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js)).
-
-### Using Bower to load the entire library
-If you wish to load the specific version downloaded in your Bower package, there are two options.
-
-1) Override the CDN library location with the global `MIXPANEL_CUSTOM_LIB_URL` var:
-```html
-<script>
-  window.MIXPANEL_CUSTOM_LIB_URL = 'bower_components/mixpanel/mixpanel.js';
-</script>
-<script src="bower_components/mixpanel/mixpanel-jslib-snippet.min.js"></script>
-```
-or
-
-2) Recompile the snippet with a custom `MIXPANEL_LIB_URL` using [Closure Compiler](https://developers.google.com/closure/compiler/):
-```sh
-java -jar compiler.jar --js mixpanel-jslib-snippet.js --js_output_file mixpanel-jslib-snippet.min.js --compilation_level ADVANCED_OPTIMIZATIONS --define='MIXPANEL_LIB_URL="bower_components/mixpanel/mixpanel.js"'
+<script>window.GREENFINCH_CUSTOM_LIB_URL = 'https://asset.kcd.co.kr/js/greenfinch.min.js';</script>
+<script src="https://asset.kcd.co.kr/js/greenfinch-jslib-snippet.min.js"></script>
+<script type="text/javascript">greenfinch.init("<YOUR TOKEN>", {'service_name':'<YOUR SERVICE>', 'debug': true});</script>
 ```
 
-### Upgrading from mixpanel-bower v2.2.0 or v2.0.0
-If you originally installed Mixpanel via Bower at its previous home ([https://github.com/drubin/mixpanel-bower](https://github.com/drubin/mixpanel-bower)), the two old versions have remained functionally unchanged. To upgrade to v2.3.6 or later (the first Bower version in the official repo) from a previous Bower install, note the changed filenames: previous references to `mixpanel.js` should become `mixpanel-jslib-snippet.min.js` (the minified embed code), and previous references to `mixpanel.dev.js` should become `mixpanel.js` (the library source) or `mixpanel.min.js` (the minified library for production use).
+## 기능
+### autotrack
+- page load시 pageview 이벤트가 자동으로 전송
+- dom click시 click 이벤트가 자동으로 전송
 
-## Building bundles for release
-- Install development dependencies: `npm install`
-- Build: `npm run build-dist`
+### single page application
+- spa에서는 경로 변경 시 page load가 일어나지 않기 때문에 pageview 이벤트를 자동 전송하려면 page 변경 listener에 아래 코드 추가 필요
+```javascript
+greenfinch.page();
+```
 
-## Running tests
-- Install development dependencies: `npm install`
-- Run unit tests: `npm test`
-- Start test server for browser tests: `npm run integration_test`
-- Browse to [http://localhost:3000/tests/](http://localhost:3000/tests/) and choose a scenario to run
+### 기본 수집 컬럼
+- browser_name
+- browser_version
+- current_url
+- host
+- referrer
+- insert_id(unique_id)
+- lib_version
+- os
+- pathname
+- screen_height
+- screen_width
+- title
+- session_id
+- time
+- utm_source, utm_medium, utm_campaign, utm_content, utm_term
 
-In the future we plan to automate the last step with a headless browser to streamline development (although
-Mixpanel production releases are tested against a large matrix of browsers and operating systems).
+## 사용하기
+___
+### greenfinch.init
+greenfinch object를 초기화 하는 함수입니다. 아래와 같이 초기화 후 사용하시기 바랍니다.
 
-## Generating and publishing documentation
-- Create bundled source build: `npm run build-dist`
-- Generate Markdown: `npm run dox` (result is at `doc/readme.io/javascript-full-api-reference.md`)
-- Publish to readme.io via the [rdme](https://www.npmjs.com/package/rdme) util: `RDME_API_KEY=<API_KEY> npm run dox-publish`
+```javascript
+greenfinch.init('<YOUR TOKEN>', {'service_name': '<YOUR SERVICE>', 'debug':true or false});
+```
 
-## Thanks
-For patches and support: @bohanyang, @dehau, @drubin, @D1plo1d, @feychenie, @mogstad, @pfhayes, @sandorfr, @stefansedich, @gfx, @pkaminski, @austince, @danielbaker, @mkdai, @wolever
+| Argument | Type | Description |
+| ------------- | ------------- | ----- |
+| **token** | <span class="mp-arg-type">String, </span></br></span><span class="mp-arg-required">required</span> | 부여받은 token |
+| **config** | <span class="mp-arg-type">Object, </span></br></span><span class="mp-arg-required">required</span> | 초기화 시 필요한 config|
+| **options.service_name** | <span class="mp-arg-type">String, </span></br></span><span class="mp-arg-required">required</span> | 부여받은 service name |
+| **options.debug** | <span class="mp-arg-type">Boolean, </span></br></span><span class="mp-arg-required">required</span> | true: staging, false: production |
+
+
+___
+### greenfinch.track
+custom한 event를 전송하는 함수입니다.
+
+
+```javascript
+greenfinch.track('Registered', {'Gender': 'Male', 'Age': 21});
+```
+
+| Argument | Type | Description |
+| ------------- | ------------- | ----- |
+| **event_name** | <span class="mp-arg-type">String, </span></br></span><span class="mp-arg-required">required</span> | 이벤트 이름 |
+| **properties** | <span class="mp-arg-type">Object, </span></br></span><span class="mp-arg-optional">optional</span> | 추가적으로 전송할 properties |
+
+___
+### greenfinch.page
+pageview event를 전송하는 함수입니다.
+single page application에서 경로 변경 시 호출되는 listener에 추가하시면 됩니다. 
+
+```javascript
+greenfinch.page();
+```
+
+___
+### greenfinch.register
+super properties를 등록하는 함수입니다. 등록 이후 track되는 모든 event에 해당 properties가 추가됩니다. 로그인 성공 직후 유저 정보를 설정하는데 활용 가능합니다. 
+
+```javascript
+greenfinch.register({'user_id': 123456});
+```
+
+
+| Argument | Type | Description |
+| ------------- | ------------- | ----- |
+| **properties** | <span class="mp-arg-type">Object, </span></br></span><span class="mp-arg-required">required</span> | 저장하려고 하는 properties |
+
+___
+### greenfinch.unregister
+super property에 저장되어 있는 항목을 제거하는 함수입니다. 로그아웃 후 유저 정보를 삭제하는데 활용 가능합니다.
+
+```javascript
+greenfinch.unregister('user_id');
+```
+
+
+| Argument | Type | Description |
+| ------------- | ------------- | ----- |
+| **property** | <span class="mp-arg-type">String, </span></br></span><span class="mp-arg-required">required</span> | 삭제하려고 하는 property name |
+
+

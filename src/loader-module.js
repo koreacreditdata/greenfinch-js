@@ -1,6 +1,6 @@
 /* eslint camelcase: "off" */
-import { init_as_module } from './mixpanel-core';
+import { init_as_module } from './greenfinch-core';
 
-var mixpanel = init_as_module();
+var greenfinch = init_as_module();
 
-export default mixpanel;
+export default greenfinch;

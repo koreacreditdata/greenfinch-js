@@ -262,7 +262,7 @@ mixpanel.library_name.track(...);
 | Argument | Type | Description |
 | ------------- | ------------- | ----- |
 | **token** | <span class="mp-arg-type">String</span></br></span><span class="mp-arg-required">required</span> | Your Mixpanel API token |
-| **config** | <span class="mp-arg-type">Object</span></br></span><span class="mp-arg-optional">optional</span> | A dictionary of config options to override. <a href="https://github.com/mixpanel/mixpanel-js/blob/8b2e1f7b/src/mixpanel-core.js#L87-L110">See a list of default config options</a>. |
+| **config** | <span class="mp-arg-type">Object</span></br></span><span class="mp-arg-optional">optional</span> | A dictionary of config options to override. <a href="https://github.com/mixpanel/mixpanel-js/blob/8b2e1f7b/src/greenfinch-core.js#L87-L110">See a list of default config options</a>. |
 | **name** | <span class="mp-arg-type">String</span></br></span><span class="mp-arg-optional">optional</span> | The name for the new mixpanel instance that you want created |
 
 

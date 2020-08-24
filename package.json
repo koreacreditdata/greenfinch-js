@@ -1,8 +1,8 @@
 {
-  "name": "mixpanel-browser",
-  "version": "2.38.0",
-  "description": "The official Mixpanel JavaScript browser client library",
-  "main": "dist/mixpanel.cjs.js",
+  "name": "greenfinch",
+  "version": "0.3.0",
+  "description": "The official Greenfinch JavaScript browser client library",
+  "main": "dist/greenfinch.cjs.js",
   "directories": {
     "test": "tests"
   },
@@ -18,19 +18,16 @@
     "prepublishOnly": "npm run build-dist",
     "start": "pushd examples; python -m SimpleHTTPServer; popd",
     "test": "npm run lint && npm run unit-test",
-    "unit-test": "BABEL_ENV=test mocha --require babel-core/register tests/unit/*.js",
+    "unit-test": "BABEL_ENV=test mocha --require babel-core/register tests/unit/loader.js",
     "validate": "npm ls"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mixpanel/mixpanel-js.git"
+    "url": "https://github.com/koreacreditdata/mixpanel-js"
   },
   "author": "",
   "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/mixpanel/mixpanel-js/issues"
-  },
-  "homepage": "https://github.com/mixpanel/mixpanel-js",
+  "homepage": "https://github.com/koreacreditdata/mixpanel-js",
   "devDependencies": {
     "babel": "6.5.2",
     "babel-core": "6.7.2",

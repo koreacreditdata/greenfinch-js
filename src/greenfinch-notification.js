@@ -1,18 +1,18 @@
 /* eslint camelcase: "off" */
 
-import { CAMPAIGN_IDS_KEY } from './mixpanel-persistence';
+import { CAMPAIGN_IDS_KEY } from './greenfinch-persistence';
 import { evaluateSelector } from './property-filters';
 import { _ } from './utils';
 
 // Internal class for notification display
 
-var MixpanelNotification = function(notif_data, mixpanel_instance) {
+var GreenfinchNotification = function(notif_data, greenfinch_instance) {
     _.bind_instance_methods(this);
 
-    this.mixpanel          = mixpanel_instance;
-    this.persistence       = this.mixpanel['persistence'];
-    this.resource_protocol = this.mixpanel.get_config('inapp_protocol');
-    this.cdn_host          = this.mixpanel.get_config('cdn');
+    this.greenfinch          = greenfinch_instance;
+    this.persistence       = this.greenfinch['persistence'];
+    this.resource_protocol = this.greenfinch.get_config('inapp_protocol');
+    this.cdn_host          = this.greenfinch.get_config('cdn');
 
     this.campaign_id = _.escapeHTML(notif_data['id']);
     this.message_id  = _.escapeHTML(notif_data['message_id']);
@@ -22,8 +22,8 @@ var MixpanelNotification = function(notif_data, mixpanel_instance) {
     this.notif_type      = _.escapeHTML(notif_data['type']) || 'takeover';
     this.style           = _.escapeHTML(notif_data['style']) || 'light';
     this.title           = _.escapeHTML(notif_data['title']) || '';
-    this.video_width     = MixpanelNotification.VIDEO_WIDTH;
-    this.video_height    = MixpanelNotification.VIDEO_HEIGHT;
+    this.video_width     = GreenfinchNotification.VIDEO_WIDTH;
+    this.video_height    = GreenfinchNotification.VIDEO_HEIGHT;
 
     this.display_triggers = notif_data['display_triggers'] || [];
 
@@ -47,28 +47,28 @@ var MixpanelNotification = function(notif_data, mixpanel_instance) {
     if (!this.mini) {
         this.notif_type = 'takeover';
     }
-    this.notif_width = !this.mini ? MixpanelNotification.NOTIF_WIDTH : MixpanelNotification.NOTIF_WIDTH_MINI;
+    this.notif_width = !this.mini ? GreenfinchNotification.NOTIF_WIDTH : GreenfinchNotification.NOTIF_WIDTH_MINI;
 
     this._set_client_config();
     this.imgs_to_preload = this._init_image_html();
     this._init_video();
 };
 
-MixpanelNotification.ANIM_TIME         = 200;
-MixpanelNotification.MARKUP_PREFIX     = 'mixpanel-notification';
-MixpanelNotification.BG_OPACITY        = 0.6;
-MixpanelNotification.NOTIF_TOP         = 25;
-MixpanelNotification.NOTIF_START_TOP   = 200;
-MixpanelNotification.NOTIF_WIDTH       = 388;
-MixpanelNotification.NOTIF_WIDTH_MINI  = 420;
-MixpanelNotification.NOTIF_HEIGHT_MINI = 85;
-MixpanelNotification.THUMB_BORDER_SIZE = 5;
-MixpanelNotification.THUMB_IMG_SIZE    = 60;
-MixpanelNotification.THUMB_OFFSET      = Math.round(MixpanelNotification.THUMB_IMG_SIZE / 2);
-MixpanelNotification.VIDEO_WIDTH       = 595;
-MixpanelNotification.VIDEO_HEIGHT      = 334;
+GreenfinchNotification.ANIM_TIME         = 200;
+GreenfinchNotification.MARKUP_PREFIX     = 'greenfinch-notification';
+GreenfinchNotification.BG_OPACITY        = 0.6;
+GreenfinchNotification.NOTIF_TOP         = 25;
+GreenfinchNotification.NOTIF_START_TOP   = 200;
+GreenfinchNotification.NOTIF_WIDTH       = 388;
+GreenfinchNotification.NOTIF_WIDTH_MINI  = 420;
+GreenfinchNotification.NOTIF_HEIGHT_MINI = 85;
+GreenfinchNotification.THUMB_BORDER_SIZE = 5;
+GreenfinchNotification.THUMB_IMG_SIZE    = 60;
+GreenfinchNotification.THUMB_OFFSET      = Math.round(GreenfinchNotification.THUMB_IMG_SIZE / 2);
+GreenfinchNotification.VIDEO_WIDTH       = 595;
+GreenfinchNotification.VIDEO_HEIGHT      = 334;
 
-MixpanelNotification.prototype.show = function() {
+GreenfinchNotification.prototype.show = function() {
     var self = this;
     this._set_client_config();
 
@@ -85,7 +85,7 @@ MixpanelNotification.prototype.show = function() {
     this._preload_images(this._attach_and_animate);
 };
 
-MixpanelNotification.prototype.dismiss = _.safewrap(function() {
+GreenfinchNotification.prototype.dismiss = _.safewrap(function() {
     if (!this.marked_as_shown) {
         // unexpected condition: user interacted with notif even though we didn't consider it
         // visible (see _mark_as_shown()); send tracking signals to mark delivery
@@ -96,7 +96,7 @@ MixpanelNotification.prototype.dismiss = _.safewrap(function() {
     if (this.use_transitions) {
         this._remove_class('bg', 'visible');
         this._add_class(exiting_el, 'exiting');
-        setTimeout(this._remove_notification_el, MixpanelNotification.ANIM_TIME);
+        setTimeout(this._remove_notification_el, GreenfinchNotification.ANIM_TIME);
     } else {
         var notif_attr, notif_start, notif_goal;
         if (this.mini) {
@@ -105,14 +105,14 @@ MixpanelNotification.prototype.dismiss = _.safewrap(function() {
             notif_goal  = -100;
         } else {
             notif_attr  = 'top';
-            notif_start = MixpanelNotification.NOTIF_TOP;
-            notif_goal  = MixpanelNotification.NOTIF_START_TOP + MixpanelNotification.NOTIF_TOP;
+            notif_start = GreenfinchNotification.NOTIF_TOP;
+            notif_goal  = GreenfinchNotification.NOTIF_START_TOP + GreenfinchNotification.NOTIF_TOP;
         }
         this._animate_els([
             {
                 el:    this._get_el('bg'),
                 attr:  'opacity',
-                start: MixpanelNotification.BG_OPACITY,
+                start: GreenfinchNotification.BG_OPACITY,
                 goal:  0.0
             },
             {
@@ -127,12 +127,12 @@ MixpanelNotification.prototype.dismiss = _.safewrap(function() {
                 start: notif_start,
                 goal:  notif_goal
             }
-        ], MixpanelNotification.ANIM_TIME, this._remove_notification_el);
+        ], GreenfinchNotification.ANIM_TIME, this._remove_notification_el);
     }
 });
 
-MixpanelNotification.prototype._add_class = _.safewrap(function(el, class_name) {
-    class_name = MixpanelNotification.MARKUP_PREFIX + '-' + class_name;
+GreenfinchNotification.prototype._add_class = _.safewrap(function(el, class_name) {
+    class_name = GreenfinchNotification.MARKUP_PREFIX + '-' + class_name;
     if (typeof el === 'string') {
         el = this._get_el(el);
     }
@@ -142,8 +142,8 @@ MixpanelNotification.prototype._add_class = _.safewrap(function(el, class_name) 
         el.className += ' ' + class_name;
     }
 });
-MixpanelNotification.prototype._remove_class = _.safewrap(function(el, class_name) {
-    class_name = MixpanelNotification.MARKUP_PREFIX + '-' + class_name;
+GreenfinchNotification.prototype._remove_class = _.safewrap(function(el, class_name) {
+    class_name = GreenfinchNotification.MARKUP_PREFIX + '-' + class_name;
     if (typeof el === 'string') {
         el = this._get_el(el);
     }
@@ -155,7 +155,7 @@ MixpanelNotification.prototype._remove_class = _.safewrap(function(el, class_nam
     }
 });
 
-MixpanelNotification.prototype._animate_els = _.safewrap(function(anims, mss, done_cb, start_time) {
+GreenfinchNotification.prototype._animate_els = _.safewrap(function(anims, mss, done_cb, start_time) {
     var self = this,
         in_progress = false,
         ai, anim,
@@ -199,7 +199,7 @@ MixpanelNotification.prototype._animate_els = _.safewrap(function(anims, mss, do
     setTimeout(function() { self._animate_els(anims, mss, done_cb, start_time); }, 10);
 });
 
-MixpanelNotification.prototype._attach_and_animate = _.safewrap(function() {
+GreenfinchNotification.prototype._attach_and_animate = _.safewrap(function() {
     var self = this;
 
     // no possibility to double-display
@@ -225,15 +225,15 @@ MixpanelNotification.prototype._attach_and_animate = _.safewrap(function() {
                 notif_goal  = 20;
             } else {
                 notif_attr  = 'top';
-                notif_start = MixpanelNotification.NOTIF_START_TOP + MixpanelNotification.NOTIF_TOP;
-                notif_goal  = MixpanelNotification.NOTIF_TOP;
+                notif_start = GreenfinchNotification.NOTIF_START_TOP + GreenfinchNotification.NOTIF_TOP;
+                notif_goal  = GreenfinchNotification.NOTIF_TOP;
             }
             self._animate_els([
                 {
                     el:    self._get_el('bg'),
                     attr:  'opacity',
                     start: 0.0,
-                    goal:  MixpanelNotification.BG_OPACITY
+                    goal:  GreenfinchNotification.BG_OPACITY
                 },
                 {
                     el:    notif_el,
@@ -247,7 +247,7 @@ MixpanelNotification.prototype._attach_and_animate = _.safewrap(function() {
                     start: notif_start,
                     goal:  notif_goal
                 }
-            ], MixpanelNotification.ANIM_TIME, self._mark_as_shown);
+            ], GreenfinchNotification.ANIM_TIME, self._mark_as_shown);
         }
     }, 100);
     _.register_event(self._get_el('cancel'), 'click', function(e) {
@@ -265,7 +265,7 @@ MixpanelNotification.prototype._attach_and_animate = _.safewrap(function() {
             self.dismiss();
             if (self.clickthrough) {
                 var tracking_cb = null;
-                if (self.mixpanel.get_config('inapp_link_new_window')) {
+                if (self.greenfinch.get_config('inapp_link_new_window')) {
                     window.open(self.dest_url);
                 } else {
                     tracking_cb = function() {
@@ -278,19 +278,19 @@ MixpanelNotification.prototype._attach_and_animate = _.safewrap(function() {
     });
 });
 
-MixpanelNotification.prototype._get_el = function(id) {
-    return document.getElementById(MixpanelNotification.MARKUP_PREFIX + '-' + id);
+GreenfinchNotification.prototype._get_el = function(id) {
+    return document.getElementById(GreenfinchNotification.MARKUP_PREFIX + '-' + id);
 };
 
-MixpanelNotification.prototype._get_notification_display_el = function() {
+GreenfinchNotification.prototype._get_notification_display_el = function() {
     return this._get_el(this.notif_type);
 };
 
-MixpanelNotification.prototype._get_shown_campaigns = function() {
+GreenfinchNotification.prototype._get_shown_campaigns = function() {
     return this.persistence['props'][CAMPAIGN_IDS_KEY] || (this.persistence['props'][CAMPAIGN_IDS_KEY] = {});
 };
 
-MixpanelNotification.prototype._matches_event_data = _.safewrap(function(event_data) {
+GreenfinchNotification.prototype._matches_event_data = _.safewrap(function(event_data) {
     var event_name = event_data['event'] || '';
     for (var i = 0; i < this.display_triggers.length; i++) {
         var display_trigger = this.display_triggers[i];
@@ -309,11 +309,11 @@ MixpanelNotification.prototype._matches_event_data = _.safewrap(function(event_d
 });
 
 
-MixpanelNotification.prototype._browser_lte = function(browser, version) {
+GreenfinchNotification.prototype._browser_lte = function(browser, version) {
     return this.browser_versions[browser] && this.browser_versions[browser] <= version;
 };
 
-MixpanelNotification.prototype._init_image_html = function() {
+GreenfinchNotification.prototype._init_image_html = function() {
     var imgs_to_preload = [];
 
     if (!this.mini) {
@@ -329,8 +329,8 @@ MixpanelNotification.prototype._init_image_html = function() {
                     '<div id="thumbborder-wrapper"><div id="thumbborder"></div></div>' +
                     '<img id="thumbnail"' +
                         ' src="' + this.thumb_image_url + '"' +
-                        ' width="' + MixpanelNotification.THUMB_IMG_SIZE + '"' +
-                        ' height="' + MixpanelNotification.THUMB_IMG_SIZE + '"' +
+                        ' width="' + GreenfinchNotification.THUMB_IMG_SIZE + '"' +
+                        ' height="' + GreenfinchNotification.THUMB_IMG_SIZE + '"' +
                     '/>' +
                     '<div id="thumbspacer"></div>';
         } else {
@@ -344,7 +344,7 @@ MixpanelNotification.prototype._init_image_html = function() {
     return imgs_to_preload;
 };
 
-MixpanelNotification.prototype._init_notification_el = function() {
+GreenfinchNotification.prototype._init_notification_el = function() {
     var notification_html = '';
     var video_src         = '';
     var video_html        = '';
@@ -353,7 +353,7 @@ MixpanelNotification.prototype._init_notification_el = function() {
                                 '</div>';
 
     this.notification_el = document.createElement('div');
-    this.notification_el.id = MixpanelNotification.MARKUP_PREFIX + '-wrapper';
+    this.notification_el.id = GreenfinchNotification.MARKUP_PREFIX + '-wrapper';
     if (!this.mini) {
         // TAKEOVER notification
         var close_html  = (this.clickthrough || this.show_video) ? '' : '<div id="button-close"></div>',
@@ -372,7 +372,7 @@ MixpanelNotification.prototype._init_notification_el = function() {
                             '<div id="title">' + this.title + '</div>' +
                             '<div id="body">' + this.body + '</div>' +
                             '<div id="tagline">' +
-                                '<a href="http://mixpanel.com?from=inapp" target="_blank">POWERED BY MIXPANEL</a>' +
+                                '<a href="http://greenfinch.com?from=inapp" target="_blank">POWERED BY MIXPANEL</a>' +
                             '</div>' +
                         '</div>' +
                         '<div id="button">' +
@@ -419,7 +419,7 @@ MixpanelNotification.prototype._init_notification_el = function() {
     }
     if (this.show_video) {
         this.video_iframe =
-                '<iframe id="' + MixpanelNotification.MARKUP_PREFIX + '-video-frame" ' +
+                '<iframe id="' + GreenfinchNotification.MARKUP_PREFIX + '-video-frame" ' +
                     'width="' + this.video_width + '" height="' + this.video_height + '" ' +
                     ' src="' + video_src + '"' +
                     ' frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen="1" scrolling="no"' +
@@ -450,11 +450,11 @@ MixpanelNotification.prototype._init_notification_el = function() {
                 '</div>' +
             '</div>' +
         '</div>')
-            .replace(/class="/g, 'class="' + MixpanelNotification.MARKUP_PREFIX + '-')
-            .replace(/id="/g, 'id="' + MixpanelNotification.MARKUP_PREFIX + '-');
+            .replace(/class="/g, 'class="' + GreenfinchNotification.MARKUP_PREFIX + '-')
+            .replace(/id="/g, 'id="' + GreenfinchNotification.MARKUP_PREFIX + '-');
 };
 
-MixpanelNotification.prototype._init_styles = function() {
+GreenfinchNotification.prototype._init_styles = function() {
     if (this.style === 'dark') {
         this.style_vals = {
             bg:             '#1d1f25',
@@ -487,15 +487,15 @@ MixpanelNotification.prototype._init_styles = function() {
     var shadow = '0px 0px 35px 0px rgba(45, 49, 56, 0.7)',
         video_shadow = shadow,
         mini_shadow = shadow,
-        thumb_total_size = MixpanelNotification.THUMB_IMG_SIZE + MixpanelNotification.THUMB_BORDER_SIZE * 2,
-        anim_seconds = (MixpanelNotification.ANIM_TIME / 1000) + 's';
+        thumb_total_size = GreenfinchNotification.THUMB_IMG_SIZE + GreenfinchNotification.THUMB_BORDER_SIZE * 2,
+        anim_seconds = (GreenfinchNotification.ANIM_TIME / 1000) + 's';
     if (this.mini) {
         shadow = 'none';
     }
 
     // don't display on small viewports
     var notif_media_queries = {},
-        min_width = MixpanelNotification.NOTIF_WIDTH_MINI + 20;
+        min_width = GreenfinchNotification.NOTIF_WIDTH_MINI + 20;
     notif_media_queries['@media only screen and (max-width: ' + (min_width - 1) + 'px)'] = {
         '#overlay': {
             'display': 'none'
@@ -549,7 +549,7 @@ MixpanelNotification.prototype._init_styles = function() {
             'transition': 'opacity ' + anim_seconds
         },
         '#bg.visible': {
-            'opacity': MixpanelNotification.BG_OPACITY
+            'opacity': GreenfinchNotification.BG_OPACITY
         },
         '.mini #bg': {
             'width': '0',
@@ -569,29 +569,29 @@ MixpanelNotification.prototype._init_styles = function() {
         '#takeover': {
             'position': 'absolute',
             'left': '50%',
-            'width': MixpanelNotification.NOTIF_WIDTH + 'px',
-            'margin-left': Math.round(-MixpanelNotification.NOTIF_WIDTH / 2) + 'px',
+            'width': GreenfinchNotification.NOTIF_WIDTH + 'px',
+            'margin-left': Math.round(-GreenfinchNotification.NOTIF_WIDTH / 2) + 'px',
             'backface-visibility': 'hidden',
             'transform': 'rotateY(0deg)',
             'opacity': '0.0',
-            'top': MixpanelNotification.NOTIF_START_TOP + 'px',
+            'top': GreenfinchNotification.NOTIF_START_TOP + 'px',
             'transition': 'opacity ' + anim_seconds + ', top ' + anim_seconds
         },
         '#takeover.visible': {
             'opacity': '1.0',
-            'top': MixpanelNotification.NOTIF_TOP + 'px'
+            'top': GreenfinchNotification.NOTIF_TOP + 'px'
         },
         '#takeover.exiting': {
             'opacity': '0.0',
-            'top': MixpanelNotification.NOTIF_START_TOP + 'px'
+            'top': GreenfinchNotification.NOTIF_START_TOP + 'px'
         },
         '#thumbspacer': {
-            'height': MixpanelNotification.THUMB_OFFSET + 'px'
+            'height': GreenfinchNotification.THUMB_OFFSET + 'px'
         },
         '#thumbborder-wrapper': {
             'position': 'absolute',
-            'top': (-MixpanelNotification.THUMB_BORDER_SIZE) + 'px',
-            'left': (MixpanelNotification.NOTIF_WIDTH / 2 - MixpanelNotification.THUMB_OFFSET - MixpanelNotification.THUMB_BORDER_SIZE) + 'px',
+            'top': (-GreenfinchNotification.THUMB_BORDER_SIZE) + 'px',
+            'left': (GreenfinchNotification.NOTIF_WIDTH / 2 - GreenfinchNotification.THUMB_OFFSET - GreenfinchNotification.THUMB_BORDER_SIZE) + 'px',
             'width': thumb_total_size + 'px',
             'height': (thumb_total_size / 2) + 'px',
             'overflow': 'hidden'
@@ -607,20 +607,20 @@ MixpanelNotification.prototype._init_styles = function() {
         '#thumbnail': {
             'position': 'absolute',
             'top': '0px',
-            'left': (MixpanelNotification.NOTIF_WIDTH / 2 - MixpanelNotification.THUMB_OFFSET) + 'px',
-            'width': MixpanelNotification.THUMB_IMG_SIZE + 'px',
-            'height': MixpanelNotification.THUMB_IMG_SIZE + 'px',
+            'left': (GreenfinchNotification.NOTIF_WIDTH / 2 - GreenfinchNotification.THUMB_OFFSET) + 'px',
+            'width': GreenfinchNotification.THUMB_IMG_SIZE + 'px',
+            'height': GreenfinchNotification.THUMB_IMG_SIZE + 'px',
             'overflow': 'hidden',
             'z-index': '100',
-            'border-radius': MixpanelNotification.THUMB_IMG_SIZE + 'px'
+            'border-radius': GreenfinchNotification.THUMB_IMG_SIZE + 'px'
         },
         '#mini': {
             'position': 'absolute',
             'right': '20px',
-            'top': MixpanelNotification.NOTIF_TOP + 'px',
+            'top': GreenfinchNotification.NOTIF_TOP + 'px',
             'width': this.notif_width + 'px',
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI * 2 + 'px',
-            'margin-top': 20 - MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI * 2 + 'px',
+            'margin-top': 20 - GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'backface-visibility': 'hidden',
             'opacity': '0.0',
             'transform': 'rotateX(90deg)',
@@ -643,18 +643,18 @@ MixpanelNotification.prototype._init_styles = function() {
             'color': this.style_vals.text_main
         },
         '#mini #mainbox': {
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
-            'margin-top': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
+            'margin-top': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'border-radius': '3px',
             'transition': 'background-color ' + anim_seconds
         },
         '#mini-border': {
-            'height': (MixpanelNotification.NOTIF_HEIGHT_MINI + 6) + 'px',
-            'width': (MixpanelNotification.NOTIF_WIDTH_MINI + 6) + 'px',
+            'height': (GreenfinchNotification.NOTIF_HEIGHT_MINI + 6) + 'px',
+            'width': (GreenfinchNotification.NOTIF_WIDTH_MINI + 6) + 'px',
             'position': 'absolute',
             'top': '-3px',
             'left': '-3px',
-            'margin-top': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'margin-top': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'border-radius': '6px',
             'opacity': '0.25',
             'background-color': '#fff',
@@ -665,7 +665,7 @@ MixpanelNotification.prototype._init_styles = function() {
             'position': 'relative',
             'display': 'inline-block',
             'width': '75px',
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'border-radius': '3px 0 0 3px',
             'background-color': this.style_vals.bg_actions,
             'background': 'linear-gradient(135deg, ' + this.style_vals.bg_light + ' 0%, ' + this.style_vals.bg_actions + ' 100%)',
@@ -690,7 +690,7 @@ MixpanelNotification.prototype._init_styles = function() {
         },
         '#mini-content': {
             'text-align': 'left',
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'cursor': 'pointer'
         },
         '#img': {
@@ -721,14 +721,14 @@ MixpanelNotification.prototype._init_styles = function() {
             'display': 'inline-block',
             'max-width': '250px',
             'margin': '0 0 0 30px',
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px',
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px',
             'font-size': '16px',
             'letter-spacing': '0.8px',
             'color': this.style_vals.text_title
         },
         '#mini #body-text': {
             'display': 'table',
-            'height': MixpanelNotification.NOTIF_HEIGHT_MINI + 'px'
+            'height': GreenfinchNotification.NOTIF_HEIGHT_MINI + 'px'
         },
         '#mini #body-text div': {
             'display': 'table-cell',
@@ -835,7 +835,7 @@ MixpanelNotification.prototype._init_styles = function() {
             'position': 'absolute',
             'width': (this.video_width - 1) + 'px',
             'height': this.video_height + 'px',
-            'top': MixpanelNotification.NOTIF_TOP + 'px',
+            'top': GreenfinchNotification.NOTIF_TOP + 'px',
             'margin-top': '100px',
             'left': '50%',
             'margin-left': Math.round(-this.video_width / 2) + 'px',
@@ -950,8 +950,8 @@ MixpanelNotification.prototype._init_styles = function() {
             var st = '';
             for (var selector in style_defs) {
                 var mp_selector = selector
-                    .replace(/#/g, '#' + MixpanelNotification.MARKUP_PREFIX + '-')
-                    .replace(/\./g, '.' + MixpanelNotification.MARKUP_PREFIX + '-');
+                    .replace(/#/g, '#' + GreenfinchNotification.MARKUP_PREFIX + '-')
+                    .replace(/\./g, '.' + GreenfinchNotification.MARKUP_PREFIX + '-');
                 st += '\n' + mp_selector + ' {';
                 var props = style_defs[selector];
                 for (var k in props) {
@@ -983,7 +983,7 @@ MixpanelNotification.prototype._init_styles = function() {
     inject_styles(notif_styles, notif_media_queries);
 };
 
-MixpanelNotification.prototype._init_video = _.safewrap(function() {
+GreenfinchNotification.prototype._init_video = _.safewrap(function() {
     if (!this.video_url) {
         return;
     }
@@ -1029,7 +1029,7 @@ MixpanelNotification.prototype._init_video = _.safewrap(function() {
     }
 });
 
-MixpanelNotification.prototype._mark_as_shown = _.safewrap(function() {
+GreenfinchNotification.prototype._mark_as_shown = _.safewrap(function() {
     // click on background to dismiss
     var self = this;
     _.register_event(self._get_el('bg'), 'click', function() {
@@ -1054,7 +1054,7 @@ MixpanelNotification.prototype._mark_as_shown = _.safewrap(function() {
     }
 });
 
-MixpanelNotification.prototype._mark_delivery = _.safewrap(function(extra_props) {
+GreenfinchNotification.prototype._mark_delivery = _.safewrap(function(extra_props) {
     if (!this.marked_as_shown) {
         this.marked_as_shown = true;
 
@@ -1067,8 +1067,8 @@ MixpanelNotification.prototype._mark_delivery = _.safewrap(function(extra_props)
         // track delivery
         this._track_event('$campaign_delivery', extra_props);
 
-        // mark notification shown (mixpanel property)
-        this.mixpanel['people']['append']({
+        // mark notification shown (greenfinch property)
+        this.greenfinch['people']['append']({
             '$campaigns': this.campaign_id,
             '$notifications': {
                 'campaign_id': this.campaign_id,
@@ -1080,7 +1080,7 @@ MixpanelNotification.prototype._mark_delivery = _.safewrap(function(extra_props)
     }
 });
 
-MixpanelNotification.prototype._preload_images = function(all_loaded_cb) {
+GreenfinchNotification.prototype._preload_images = function(all_loaded_cb) {
     var self = this;
     if (this.imgs_to_preload.length === 0) {
         all_loaded_cb();
@@ -1123,13 +1123,13 @@ MixpanelNotification.prototype._preload_images = function(all_loaded_cb) {
     }
 };
 
-MixpanelNotification.prototype._remove_notification_el = _.safewrap(function() {
+GreenfinchNotification.prototype._remove_notification_el = _.safewrap(function() {
     window.clearInterval(this._video_progress_checker);
     this.notification_el.style.visibility = 'hidden';
     this.body_el.removeChild(this.notification_el);
 });
 
-MixpanelNotification.prototype._set_client_config = function() {
+GreenfinchNotification.prototype._set_client_config = function() {
     var get_browser_version = function(browser_ex) {
         var match = navigator.userAgent.match(browser_ex);
         return match && match[1];
@@ -1184,7 +1184,7 @@ MixpanelNotification.prototype._set_client_config = function() {
         is_css_compatible('transform');
 };
 
-MixpanelNotification.prototype._switch_to_video = _.safewrap(function() {
+GreenfinchNotification.prototype._switch_to_video = _.safewrap(function() {
     var self = this,
         anims = [
             {
@@ -1196,7 +1196,7 @@ MixpanelNotification.prototype._switch_to_video = _.safewrap(function() {
             {
                 el:    self._get_notification_display_el(),
                 attr:  'top',
-                start: MixpanelNotification.NOTIF_TOP,
+                start: GreenfinchNotification.NOTIF_TOP,
                 goal:  -500
             },
             {
@@ -1227,7 +1227,7 @@ MixpanelNotification.prototype._switch_to_video = _.safewrap(function() {
             el:    self._get_el('bg'),
             attr:  'opacity',
             start: 0.0,
-            goal:  MixpanelNotification.BG_OPACITY
+            goal:  GreenfinchNotification.BG_OPACITY
         });
     }
 
@@ -1243,13 +1243,13 @@ MixpanelNotification.prototype._switch_to_video = _.safewrap(function() {
     };
     if (self.flip_animate) {
         self._add_class('flipper', 'flipped');
-        setTimeout(video_ready, MixpanelNotification.ANIM_TIME);
+        setTimeout(video_ready, GreenfinchNotification.ANIM_TIME);
     } else {
-        self._animate_els(anims, MixpanelNotification.ANIM_TIME, video_ready);
+        self._animate_els(anims, GreenfinchNotification.ANIM_TIME, video_ready);
     }
 });
 
-MixpanelNotification.prototype._track_event = function(event_name, properties, cb) {
+GreenfinchNotification.prototype._track_event = function(event_name, properties, cb) {
     if (this.campaign_id) {
         properties = properties || {};
         properties = _.extend(properties, {
@@ -1258,13 +1258,13 @@ MixpanelNotification.prototype._track_event = function(event_name, properties, c
             'message_type':    'web_inapp',
             'message_subtype': this.notif_type
         });
-        this.mixpanel['track'](event_name, properties, cb);
+        this.greenfinch['track'](event_name, properties, cb);
     } else if (cb) {
         cb.call();
     }
 };
 
-MixpanelNotification.prototype._yt_video_ready = _.safewrap(function() {
+GreenfinchNotification.prototype._yt_video_ready = _.safewrap(function() {
     var self = this;
     if (self.video_inited) {
         return;
@@ -1275,7 +1275,7 @@ MixpanelNotification.prototype._yt_video_ready = _.safewrap(function() {
         progress_time = self._get_el('video-time'),
         progress_el   = self._get_el('video-progress');
 
-    new window['YT']['Player'](MixpanelNotification.MARKUP_PREFIX + '-video-frame', {
+    new window['YT']['Player'](GreenfinchNotification.MARKUP_PREFIX + '-video-frame', {
         'events': {
             'onReady': function(event) {
                 var ytplayer = event['target'],
@@ -1306,4 +1306,4 @@ MixpanelNotification.prototype._yt_video_ready = _.safewrap(function() {
     });
 });
 
-export { MixpanelNotification };
+export { GreenfinchNotification };

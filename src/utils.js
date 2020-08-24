@@ -69,7 +69,7 @@ var console = {
     /** @type {function(...*)} */
     error: function() {
         if (Config.DEBUG && !_.isUndefined(windowConsole) && windowConsole) {
-            var args = ['Mixpanel error:'].concat(_.toArray(arguments));
+            var args = ['Greenfinch error:'].concat(_.toArray(arguments));
             try {
                 windowConsole.error.apply(windowConsole, args);
             } catch (err) {
@@ -82,7 +82,7 @@ var console = {
     /** @type {function(...*)} */
     critical: function() {
         if (!_.isUndefined(windowConsole) && windowConsole) {
-            var args = ['Mixpanel error:'].concat(_.toArray(arguments));
+            var args = ['Greenfinch error:'].concat(_.toArray(arguments));
             try {
                 windowConsole.error.apply(windowConsole, args);
             } catch (err) {
@@ -370,7 +370,7 @@ _.safewrap = function(f) {
         try {
             return f.apply(this, arguments);
         } catch (e) {
-            console.critical('Implementation error. Please turn on debug and contact support@mixpanel.com.');
+            console.critical('Implementation error. Please turn on debug and contact support@greenfinch.com.');
             if (Config.DEBUG){
                 console.critical(e);
             }
@@ -1152,7 +1152,7 @@ _.register_event = (function() {
     // written by Dean Edwards, 2005
     // with input from Tino Zijdel - crisp@xs4all.nl
     // with input from Carl Sverre - mail@carlsverre.com
-    // with input from Mixpanel
+    // with input from Greenfinch
     // http://dean.edwards.name/weblog/2005/10/add-event/
     // https://gist.github.com/1930440
 
@@ -1680,7 +1680,7 @@ var DOMAIN_MATCH_REGEX = /[a-z0-9][a-z0-9-]+\.[a-z.]{2,6}$/i;
  * common TLDs like .com/.org that always have a simple SLD.TLD structure (example.com), we
  * simply extract the last two .-separated parts of the hostname (SIMPLE_DOMAIN_MATCH_REGEX).
  * For others, we attempt to account for short ccSLD+TLD combos (.ac.uk) with the legacy
- * DOMAIN_MATCH_REGEX (kept to maintain backwards compatibility with existing Mixpanel
+ * DOMAIN_MATCH_REGEX (kept to maintain backwards compatibility with existing Greenfinch
  * integrations). The only _reliable_ way to extract domain from hostname is with an up-to-date
  * list like at https://publicsuffix.org/ so for cases that this helper fails at, the SDK
  * offers the 'cookie_domain' config option to set it explicitly.

@@ -1,5 +1,5 @@
 /* eslint camelcase: "off" */
-import { addOptOutCheckMixpanelPeople } from './gdpr-utils';
+import { addOptOutCheckGreenfinchPeople } from './gdpr-utils';
 import {
     SET_ACTION,
     SET_ONCE_ACTION,
@@ -13,15 +13,15 @@ import {
 import { _, console } from './utils';
 
 /**
- * Mixpanel People Object
+ * Greenfinch People Object
  * @constructor
  */
-var MixpanelPeople = function() {};
+var GreenfinchPeople = function() {};
 
-_.extend(MixpanelPeople.prototype, apiActions);
+_.extend(GreenfinchPeople.prototype, apiActions);
 
-MixpanelPeople.prototype._init = function(mixpanel_instance) {
-    this._mixpanel = mixpanel_instance;
+GreenfinchPeople.prototype._init = function(greenfinch_instance) {
+    this._greenfinch = greenfinch_instance;
 };
 
 /*
@@ -29,10 +29,10 @@ MixpanelPeople.prototype._init = function(mixpanel_instance) {
 *
 * ### Usage:
 *
-*     mixpanel.people.set('gender', 'm');
+*     greenfinch.people.set('gender', 'm');
 *
 *     // or set multiple properties at once
-*     mixpanel.people.set({
+*     greenfinch.people.set({
 *         'Company': 'Acme',
 *         'Plan': 'Premium',
 *         'Upgrade date': new Date()
@@ -43,21 +43,21 @@ MixpanelPeople.prototype._init = function(mixpanel_instance) {
 * @param {*} [to] A value to set on the given property name
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.set = addOptOutCheckMixpanelPeople(function(prop, to, callback) {
+GreenfinchPeople.prototype.set = addOptOutCheckGreenfinchPeople(function(prop, to, callback) {
     var data = this.set_action(prop, to);
     if (_.isObject(prop)) {
         callback = to;
     }
     // make sure that the referrer info has been updated and saved
     if (this._get_config('save_referrer')) {
-        this._mixpanel['persistence'].update_referrer_info(document.referrer);
+        this._greenfinch['persistence'].update_referrer_info(document.referrer);
     }
 
     // update $set object with default people properties
     data[SET_ACTION] = _.extend(
         {},
         _.info.people_properties(),
-        this._mixpanel['persistence'].get_referrer_info(),
+        this._greenfinch['persistence'].get_referrer_info(),
         data[SET_ACTION]
     );
     return this._send_request(data, callback);
@@ -70,10 +70,10 @@ MixpanelPeople.prototype.set = addOptOutCheckMixpanelPeople(function(prop, to, c
 *
 * ### Usage:
 *
-*     mixpanel.people.set_once('First Login Date', new Date());
+*     greenfinch.people.set_once('First Login Date', new Date());
 *
 *     // or set multiple properties at once
-*     mixpanel.people.set_once({
+*     greenfinch.people.set_once({
 *         'First Login Date': new Date(),
 *         'Starting Plan': 'Premium'
 *     });
@@ -84,7 +84,7 @@ MixpanelPeople.prototype.set = addOptOutCheckMixpanelPeople(function(prop, to, c
 * @param {*} [to] A value to set on the given property name
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.set_once = addOptOutCheckMixpanelPeople(function(prop, to, callback) {
+GreenfinchPeople.prototype.set_once = addOptOutCheckGreenfinchPeople(function(prop, to, callback) {
     var data = this.set_once_action(prop, to);
     if (_.isObject(prop)) {
         callback = to;
@@ -97,15 +97,15 @@ MixpanelPeople.prototype.set_once = addOptOutCheckMixpanelPeople(function(prop, 
 *
 * ### Usage:
 *
-*     mixpanel.people.unset('gender');
+*     greenfinch.people.unset('gender');
 *
 *     // or unset multiple properties at once
-*     mixpanel.people.unset(['gender', 'Company']);
+*     greenfinch.people.unset(['gender', 'Company']);
 *
 * @param {Array|String} prop If a string, this is the name of the property. If an array, this is a list of property names.
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.unset = addOptOutCheckMixpanelPeople(function(prop, callback) {
+GreenfinchPeople.prototype.unset = addOptOutCheckGreenfinchPeople(function(prop, callback) {
     var data = this.unset_action(prop);
     return this._send_request(data, callback);
 });
@@ -115,18 +115,18 @@ MixpanelPeople.prototype.unset = addOptOutCheckMixpanelPeople(function(prop, cal
 *
 * ### Usage:
 *
-*     mixpanel.people.increment('page_views', 1);
+*     greenfinch.people.increment('page_views', 1);
 *
 *     // or, for convenience, if you're just incrementing a counter by
 *     // 1, you can simply do
-*     mixpanel.people.increment('page_views');
+*     greenfinch.people.increment('page_views');
 *
 *     // to decrement a counter, pass a negative number
-*     mixpanel.people.increment('credits_left', -1);
+*     greenfinch.people.increment('credits_left', -1);
 *
-*     // like mixpanel.people.set(), you can increment multiple
+*     // like greenfinch.people.set(), you can increment multiple
 *     // properties at once:
-*     mixpanel.people.increment({
+*     greenfinch.people.increment({
 *         counter1: 1,
 *         counter2: 6
 *     });
@@ -135,14 +135,14 @@ MixpanelPeople.prototype.unset = addOptOutCheckMixpanelPeople(function(prop, cal
 * @param {Number} [by] An amount to increment the given property
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.increment = addOptOutCheckMixpanelPeople(function(prop, by, callback) {
+GreenfinchPeople.prototype.increment = addOptOutCheckGreenfinchPeople(function(prop, by, callback) {
     var data = {};
     var $add = {};
     if (_.isObject(prop)) {
         _.each(prop, function(v, k) {
             if (!this._is_reserved_property(k)) {
                 if (isNaN(parseFloat(v))) {
-                    console.error('Invalid increment value passed to mixpanel.people.increment - must be a number');
+                    console.error('Invalid increment value passed to greenfinch.people.increment - must be a number');
                     return;
                 } else {
                     $add[k] = v;
@@ -151,7 +151,7 @@ MixpanelPeople.prototype.increment = addOptOutCheckMixpanelPeople(function(prop,
         }, this);
         callback = by;
     } else {
-        // convenience: mixpanel.people.increment('property'); will
+        // convenience: greenfinch.people.increment('property'); will
         // increment 'property' by 1
         if (_.isUndefined(by)) {
             by = 1;
@@ -169,11 +169,11 @@ MixpanelPeople.prototype.increment = addOptOutCheckMixpanelPeople(function(prop,
 * ### Usage:
 *
 *     // append a value to a list, creating it if needed
-*     mixpanel.people.append('pages_visited', 'homepage');
+*     greenfinch.people.append('pages_visited', 'homepage');
 *
-*     // like mixpanel.people.set(), you can append multiple
+*     // like greenfinch.people.set(), you can append multiple
 *     // properties at once:
-*     mixpanel.people.append({
+*     greenfinch.people.append({
 *         list1: 'bob',
 *         list2: 123
 *     });
@@ -182,7 +182,7 @@ MixpanelPeople.prototype.increment = addOptOutCheckMixpanelPeople(function(prop,
 * @param {*} [value] value An item to append to the list
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.append = addOptOutCheckMixpanelPeople(function(list_name, value, callback) {
+GreenfinchPeople.prototype.append = addOptOutCheckGreenfinchPeople(function(list_name, value, callback) {
     if (_.isObject(list_name)) {
         callback = value;
     }
@@ -195,13 +195,13 @@ MixpanelPeople.prototype.append = addOptOutCheckMixpanelPeople(function(list_nam
 *
 * ### Usage:
 *
-*     mixpanel.people.remove('School', 'UCB');
+*     greenfinch.people.remove('School', 'UCB');
 *
 * @param {Object|String} list_name If a string, this is the name of the property. If an object, this is an associative array of names and values.
 * @param {*} [value] value Item to remove from the list
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.remove = addOptOutCheckMixpanelPeople(function(list_name, value, callback) {
+GreenfinchPeople.prototype.remove = addOptOutCheckGreenfinchPeople(function(list_name, value, callback) {
     if (_.isObject(list_name)) {
         callback = value;
     }
@@ -216,18 +216,18 @@ MixpanelPeople.prototype.remove = addOptOutCheckMixpanelPeople(function(list_nam
 * ### Usage:
 *
 *     // merge a value to a list, creating it if needed
-*     mixpanel.people.union('pages_visited', 'homepage');
+*     greenfinch.people.union('pages_visited', 'homepage');
 *
-*     // like mixpanel.people.set(), you can append multiple
+*     // like greenfinch.people.set(), you can append multiple
 *     // properties at once:
-*     mixpanel.people.union({
+*     greenfinch.people.union({
 *         list1: 'bob',
 *         list2: 123
 *     });
 *
-*     // like mixpanel.people.append(), you can append multiple
+*     // like greenfinch.people.append(), you can append multiple
 *     // values to the same list:
-*     mixpanel.people.union({
+*     greenfinch.people.union({
 *         list1: ['bob', 'billy']
 *     });
 *
@@ -235,7 +235,7 @@ MixpanelPeople.prototype.remove = addOptOutCheckMixpanelPeople(function(list_nam
 * @param {*} [value] Value / values to merge with the given property
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.union = addOptOutCheckMixpanelPeople(function(list_name, values, callback) {
+GreenfinchPeople.prototype.union = addOptOutCheckGreenfinchPeople(function(list_name, values, callback) {
     if (_.isObject(list_name)) {
         callback = values;
     }
@@ -246,15 +246,15 @@ MixpanelPeople.prototype.union = addOptOutCheckMixpanelPeople(function(list_name
 /*
 * Record that you have charged the current user a certain amount
 * of money. Charges recorded with track_charge() will appear in the
-* Mixpanel revenue report.
+* Greenfinch revenue report.
 *
 * ### Usage:
 *
 *     // charge a user $50
-*     mixpanel.people.track_charge(50);
+*     greenfinch.people.track_charge(50);
 *
 *     // charge a user $30.50 on the 2nd of january
-*     mixpanel.people.track_charge(30.50, {
+*     greenfinch.people.track_charge(30.50, {
 *         '$time': new Date('jan 1 2012')
 *     });
 *
@@ -262,11 +262,11 @@ MixpanelPeople.prototype.union = addOptOutCheckMixpanelPeople(function(list_name
 * @param {Object} [properties] An associative array of properties associated with the charge
 * @param {Function} [callback] If provided, the callback will be called when the server responds
 */
-MixpanelPeople.prototype.track_charge = addOptOutCheckMixpanelPeople(function(amount, properties, callback) {
+GreenfinchPeople.prototype.track_charge = addOptOutCheckGreenfinchPeople(function(amount, properties, callback) {
     if (!_.isNumber(amount)) {
         amount = parseFloat(amount);
         if (isNaN(amount)) {
-            console.error('Invalid value passed to mixpanel.people.track_charge - must be a number');
+            console.error('Invalid value passed to greenfinch.people.track_charge - must be a number');
             return;
         }
     }
@@ -282,43 +282,43 @@ MixpanelPeople.prototype.track_charge = addOptOutCheckMixpanelPeople(function(am
 *
 * ### Usage:
 *
-*     mixpanel.people.clear_charges();
+*     greenfinch.people.clear_charges();
 *
 * @param {Function} [callback] If provided, the callback will be called after tracking the event.
 */
-MixpanelPeople.prototype.clear_charges = function(callback) {
+GreenfinchPeople.prototype.clear_charges = function(callback) {
     return this.set('$transactions', [], callback);
 };
 
 /*
 * Permanently deletes the current people analytics profile from
-* Mixpanel (using the current distinct_id).
+* Greenfinch (using the current distinct_id).
 *
 * ### Usage:
 *
 *     // remove the all data you have stored about the current user
-*     mixpanel.people.delete_user();
+*     greenfinch.people.delete_user();
 *
 */
-MixpanelPeople.prototype.delete_user = function() {
+GreenfinchPeople.prototype.delete_user = function() {
     if (!this._identify_called()) {
-        console.error('mixpanel.people.delete_user() requires you to call identify() first');
+        console.error('greenfinch.people.delete_user() requires you to call identify() first');
         return;
     }
-    var data = {'$delete': this._mixpanel.get_distinct_id()};
+    var data = {'$delete': this._greenfinch.get_distinct_id()};
     return this._send_request(data);
 };
 
-MixpanelPeople.prototype.toString = function() {
-    return this._mixpanel.toString() + '.people';
+GreenfinchPeople.prototype.toString = function() {
+    return this._greenfinch.toString() + '.people';
 };
 
-MixpanelPeople.prototype._send_request = function(data, callback) {
+GreenfinchPeople.prototype._send_request = function(data, callback) {
     data['$token'] = this._get_config('token');
-    data['$distinct_id'] = this._mixpanel.get_distinct_id();
-    var device_id = this._mixpanel.get_property('$device_id');
-    var user_id = this._mixpanel.get_property('$user_id');
-    var had_persisted_distinct_id = this._mixpanel.get_property('$had_persisted_distinct_id');
+    data['$distinct_id'] = this._greenfinch.get_distinct_id();
+    var device_id = this._greenfinch.get_property('$device_id');
+    var user_id = this._greenfinch.get_property('$user_id');
+    var had_persisted_distinct_id = this._greenfinch.get_property('$had_persisted_distinct_id');
     if (device_id) {
         data['$device_id'] = device_id;
     }
@@ -344,56 +344,56 @@ MixpanelPeople.prototype._send_request = function(data, callback) {
         return truncated_data;
     }
 
-    return this._mixpanel._track_or_batch({
+    return this._greenfinch._track_or_batch({
         truncated_data: truncated_data,
         endpoint: this._get_config('api_host') + '/engage/',
-        batcher: this._mixpanel.request_batchers.people
+        batcher: this._greenfinch.request_batchers.people
     }, callback);
 };
 
-MixpanelPeople.prototype._get_config = function(conf_var) {
-    return this._mixpanel.get_config(conf_var);
+GreenfinchPeople.prototype._get_config = function(conf_var) {
+    return this._greenfinch.get_config(conf_var);
 };
 
-MixpanelPeople.prototype._identify_called = function() {
-    return this._mixpanel._flags.identify_called === true;
+GreenfinchPeople.prototype._identify_called = function() {
+    return this._greenfinch._flags.identify_called === true;
 };
 
 // Queue up engage operations if identify hasn't been called yet.
-MixpanelPeople.prototype._enqueue = function(data) {
+GreenfinchPeople.prototype._enqueue = function(data) {
     if (SET_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(SET_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(SET_ACTION, data);
     } else if (SET_ONCE_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(SET_ONCE_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(SET_ONCE_ACTION, data);
     } else if (UNSET_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(UNSET_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(UNSET_ACTION, data);
     } else if (ADD_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(ADD_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(ADD_ACTION, data);
     } else if (APPEND_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(APPEND_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(APPEND_ACTION, data);
     } else if (REMOVE_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(REMOVE_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(REMOVE_ACTION, data);
     } else if (UNION_ACTION in data) {
-        this._mixpanel['persistence']._add_to_people_queue(UNION_ACTION, data);
+        this._greenfinch['persistence']._add_to_people_queue(UNION_ACTION, data);
     } else {
         console.error('Invalid call to _enqueue():', data);
     }
 };
 
-MixpanelPeople.prototype._flush_one_queue = function(action, action_method, callback, queue_to_params_fn) {
+GreenfinchPeople.prototype._flush_one_queue = function(action, action_method, callback, queue_to_params_fn) {
     var _this = this;
-    var queued_data = _.extend({}, this._mixpanel['persistence']._get_queue(action));
+    var queued_data = _.extend({}, this._greenfinch['persistence']._get_queue(action));
     var action_params = queued_data;
 
     if (!_.isUndefined(queued_data) && _.isObject(queued_data) && !_.isEmptyObject(queued_data)) {
-        _this._mixpanel['persistence']._pop_from_people_queue(action, queued_data);
+        _this._greenfinch['persistence']._pop_from_people_queue(action, queued_data);
         if (queue_to_params_fn) {
             action_params = queue_to_params_fn(queued_data);
         }
         action_method.call(_this, action_params, function(response, data) {
             // on bad response, we want to add it back to the queue
             if (response === 0) {
-                _this._mixpanel['persistence']._add_to_people_queue(action, queued_data);
+                _this._greenfinch['persistence']._add_to_people_queue(action, queued_data);
             }
             if (!_.isUndefined(callback)) {
                 callback(response, data);
@@ -404,12 +404,12 @@ MixpanelPeople.prototype._flush_one_queue = function(action, action_method, call
 
 // Flush queued engage operations - order does not matter,
 // and there are network level race conditions anyway
-MixpanelPeople.prototype._flush = function(
+GreenfinchPeople.prototype._flush = function(
     _set_callback, _add_callback, _append_callback, _set_once_callback, _union_callback, _unset_callback, _remove_callback
 ) {
     var _this = this;
-    var $append_queue = this._mixpanel['persistence']._get_queue(APPEND_ACTION);
-    var $remove_queue = this._mixpanel['persistence']._get_queue(REMOVE_ACTION);
+    var $append_queue = this._greenfinch['persistence']._get_queue(APPEND_ACTION);
+    var $remove_queue = this._greenfinch['persistence']._get_queue(REMOVE_ACTION);
 
     this._flush_one_queue(SET_ACTION, this.set, _set_callback);
     this._flush_one_queue(SET_ONCE_ACTION, this.set_once, _set_once_callback);
@@ -423,7 +423,7 @@ MixpanelPeople.prototype._flush = function(
         var $append_item;
         var append_callback = function(response, data) {
             if (response === 0) {
-                _this._mixpanel['persistence']._add_to_people_queue(APPEND_ACTION, $append_item);
+                _this._greenfinch['persistence']._add_to_people_queue(APPEND_ACTION, $append_item);
             }
             if (!_.isUndefined(_append_callback)) {
                 _append_callback(response, data);
@@ -436,7 +436,7 @@ MixpanelPeople.prototype._flush = function(
             }
         }
         // Save the shortened append queue
-        _this._mixpanel['persistence'].save();
+        _this._greenfinch['persistence'].save();
     }
 
     // same for $remove
@@ -444,7 +444,7 @@ MixpanelPeople.prototype._flush = function(
         var $remove_item;
         var remove_callback = function(response, data) {
             if (response === 0) {
-                _this._mixpanel['persistence']._add_to_people_queue(REMOVE_ACTION, $remove_item);
+                _this._greenfinch['persistence']._add_to_people_queue(REMOVE_ACTION, $remove_item);
             }
             if (!_.isUndefined(_remove_callback)) {
                 _remove_callback(response, data);
@@ -456,25 +456,25 @@ MixpanelPeople.prototype._flush = function(
                 _this.remove($remove_item, remove_callback);
             }
         }
-        _this._mixpanel['persistence'].save();
+        _this._greenfinch['persistence'].save();
     }
 };
 
-MixpanelPeople.prototype._is_reserved_property = function(prop) {
+GreenfinchPeople.prototype._is_reserved_property = function(prop) {
     return prop === '$distinct_id' || prop === '$token' || prop === '$device_id' || prop === '$user_id' || prop === '$had_persisted_distinct_id';
 };
 
-// MixpanelPeople Exports
-MixpanelPeople.prototype['set']           = MixpanelPeople.prototype.set;
-MixpanelPeople.prototype['set_once']      = MixpanelPeople.prototype.set_once;
-MixpanelPeople.prototype['unset']         = MixpanelPeople.prototype.unset;
-MixpanelPeople.prototype['increment']     = MixpanelPeople.prototype.increment;
-MixpanelPeople.prototype['append']        = MixpanelPeople.prototype.append;
-MixpanelPeople.prototype['remove']        = MixpanelPeople.prototype.remove;
-MixpanelPeople.prototype['union']         = MixpanelPeople.prototype.union;
-MixpanelPeople.prototype['track_charge']  = MixpanelPeople.prototype.track_charge;
-MixpanelPeople.prototype['clear_charges'] = MixpanelPeople.prototype.clear_charges;
-MixpanelPeople.prototype['delete_user']   = MixpanelPeople.prototype.delete_user;
-MixpanelPeople.prototype['toString']      = MixpanelPeople.prototype.toString;
+// GreenfinchPeople Exports
+GreenfinchPeople.prototype['set']           = GreenfinchPeople.prototype.set;
+GreenfinchPeople.prototype['set_once']      = GreenfinchPeople.prototype.set_once;
+GreenfinchPeople.prototype['unset']         = GreenfinchPeople.prototype.unset;
+GreenfinchPeople.prototype['increment']     = GreenfinchPeople.prototype.increment;
+GreenfinchPeople.prototype['append']        = GreenfinchPeople.prototype.append;
+GreenfinchPeople.prototype['remove']        = GreenfinchPeople.prototype.remove;
+GreenfinchPeople.prototype['union']         = GreenfinchPeople.prototype.union;
+GreenfinchPeople.prototype['track_charge']  = GreenfinchPeople.prototype.track_charge;
+GreenfinchPeople.prototype['clear_charges'] = GreenfinchPeople.prototype.clear_charges;
+GreenfinchPeople.prototype['delete_user']   = GreenfinchPeople.prototype.delete_user;
+GreenfinchPeople.prototype['toString']      = GreenfinchPeople.prototype.toString;
 
-export { MixpanelPeople };
+export { GreenfinchPeople };

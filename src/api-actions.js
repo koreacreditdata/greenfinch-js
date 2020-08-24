@@ -11,7 +11,7 @@ import { _ } from './utils';
 /** @const */ var REMOVE_ACTION   = '$remove';
 /** @const */ var DELETE_ACTION   = '$delete';
 
-// Common internal methods for mixpanel.people and mixpanel.group APIs.
+// Common internal methods for greenfinch.people and greenfinch.group APIs.
 // These methods shouldn't involve network I/O.
 var apiActions = {
     set_action: function(prop, to) {
