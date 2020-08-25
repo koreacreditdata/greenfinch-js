@@ -242,9 +242,9 @@ GreenfinchLib.prototype._init = function (token, config, name) {
     // rollout: enable batch_requests by default for 10% of projects
     // (only if they have not specified a value in their init config)
     var variable_features = {};
-    if (!('batch_requests' in (config || {})) && determine_eligibility(token, 'batch', 10)) {
-        variable_features['batch_requests'] = true;
-    }
+    // if (!('batch_requests' in (config || {})) && determine_eligibility(token, 'batch', 10)) {
+    //     variable_features['batch_requests'] = true;
+    // }
 
     this.set_config(_.extend({}, DEFAULT_CONFIG, variable_features, config, {
         'name': name,
