@@ -736,7 +736,7 @@ Object.defineProperty(exports, '__esModule', {
 });
 var Config = {
     DEBUG: false,
-    LIB_VERSION: '0.4.0'
+    LIB_VERSION: '0.5.0'
 };
 
 exports['default'] = Config;
@@ -2379,9 +2379,10 @@ GreenfinchLib.prototype.identify = function (new_distinct_id, _set_callback, _ad
  * Useful for clearing data when a user logs out.
  */
 GreenfinchLib.prototype.reset = function () {
+    var uuid = this.get_distinct_id();
     this['persistence'].clear();
     this._flags.identify_called = false;
-    var uuid = _utils._.UUID();
+    // var uuid = _.UUID();
     this.register_once({
         'distinct_id': uuid,
         '$device_id': uuid

@@ -121,4 +121,10 @@ greenfinch.unregister('user_id');
 | ------------- | ------------- | ----- |
 | **property** | <span class="mp-arg-type">String, </span></br></span><span class="mp-arg-required">required</span> | 삭제하려고 하는 property name |
 
+___
+### greenfinch.reset
+super property에 저장되어 있는 모든 항목을 제거하는 함수입니다. 여러개의 super property를 등록 후 일괄 제거가 필요한 시점에서 사용하시면 됩니다.
 
+```javascript
+greenfinch.reset();
+```

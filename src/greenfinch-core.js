@@ -1165,9 +1165,10 @@ GreenfinchLib.prototype.identify = function (
  * Useful for clearing data when a user logs out.
  */
 GreenfinchLib.prototype.reset = function () {
+    var uuid = this.get_distinct_id()
     this['persistence'].clear();
     this._flags.identify_called = false;
-    var uuid = _.UUID();
+    // var uuid = _.UUID();
     this.register_once({
         'distinct_id': uuid,
         '$device_id': uuid
