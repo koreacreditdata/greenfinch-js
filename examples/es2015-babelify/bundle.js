@@ -736,7 +736,7 @@ Object.defineProperty(exports, '__esModule', {
 });
 var Config = {
     DEBUG: false,
-    LIB_VERSION: '0.5.0'
+    LIB_VERSION: '0.6.0'
 };
 
 exports['default'] = Config;
@@ -5275,7 +5275,7 @@ GreenfinchPersistence.prototype._expire_notification_campaigns = _utils._.safewr
 
 GreenfinchPersistence.prototype.update_campaign_params = function () {
     if (!this.campaign_params_saved) {
-        this.register_once(_utils._.info.campaignParams());
+        this.register(_utils._.info.campaignParams());
         this.campaign_params_saved = true;
     }
 };
@@ -5287,7 +5287,7 @@ GreenfinchPersistence.prototype.update_search_keyword = function (referrer) {
 // EXPORTED METHOD, we test this directly.
 GreenfinchPersistence.prototype.update_referrer_info = function (referrer) {
     // If referrer doesn't exist, we want to note the fact that it was type-in traffic.
-    this.register_once({
+    this.register({
         '$initial_referrer': referrer || '$direct',
         '$initial_referring_domain': _utils._.info.referringDomain(referrer) || '$direct'
     }, '');
